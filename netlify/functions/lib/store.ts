@@ -19,6 +19,24 @@ function store() {
   return getStore({ name: "koulzeb", consistency: "strong" });
 }
 
+/**
+ * Fill in fields introduced after a session may have been stored, so documents
+ * written under an older shape (e.g. the date-based time model) still read
+ * cleanly instead of crashing readers.
+ */
+function asParticipant(p: Participant): Participant {
+  return {
+    ...p,
+    freeTimes: p.freeTimes ?? [],
+    cuisinePrefs: p.cuisinePrefs ?? [],
+    suggestedRestaurantIds: p.suggestedRestaurantIds ?? [],
+  };
+}
+
+function asRestaurant(r: Restaurant): Restaurant {
+  return { ...r, cuisines: r.cuisines ?? [] };
+}
+
 export async function createSession(
   meta: SessionMeta,
   host: Participant,
@@ -53,9 +71,10 @@ export async function getParticipant(
   sid: string,
   pid: string,
 ): Promise<Participant | null> {
-  return (await store().get(participantKey(sid, pid), { type: "json" })) as
-    | Participant
-    | null;
+  const participant = (await store().get(participantKey(sid, pid), {
+    type: "json",
+  })) as Participant | null;
+  return participant ? asParticipant(participant) : null;
 }
 
 export async function listParticipants(sid: string): Promise<Participant[]> {
@@ -64,7 +83,7 @@ export async function listParticipants(sid: string): Promise<Participant[]> {
   const docs = await Promise.all(
     blobs.map((b) => s.get(b.key, { type: "json" })),
   );
-  return docs.filter(Boolean) as Participant[];
+  return (docs.filter(Boolean) as Participant[]).map(asParticipant);
 }
 
 export async function addRestaurant(
@@ -80,7 +99,7 @@ export async function listRestaurants(sid: string): Promise<Restaurant[]> {
   const docs = await Promise.all(
     blobs.map((b) => s.get(b.key, { type: "json" })),
   );
-  return docs.filter(Boolean) as Restaurant[];
+  return (docs.filter(Boolean) as Restaurant[]).map(asRestaurant);
 }
 
 export async function getFullSession(sid: string): Promise<Session | null> {

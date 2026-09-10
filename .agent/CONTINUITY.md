@@ -44,6 +44,14 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DISCOVERIES]
 
+- 2026-09-10 — `[USER]` "Session unavailable" on invites traced to a **stale
+  round-1 frontend bundle** calling `session.timeSlots.map`; current source and a
+  fresh `dist/` contain no `timeSlots`. Fix is a frontend redeploy/hard refresh,
+  not a code change.
+- 2026-09-10 — `[TOOL]` Netlify is **not linked/authenticated** in this
+  workspace (`netlify status` → "Not logged in"), so deploys must be run by the
+  user.
+
 - 2026-09-10 — `[TOOL]` Node 24 runs `.ts` directly (type stripping), so unit
   tests need no test transpiler. Relative imports must include `.ts`.
 - 2026-09-10 — `[TOOL]` Netlify's esbuild bundler follows imports from
@@ -51,6 +59,10 @@ Briefing for the next agent session. Newest entries first within each section.
 - 2026-09-10 — `[TOOL]` `netlify dev` generates a `deno.lock`; ignored, not needed.
 
 ## [OUTCOMES]
+
+- 2026-09-10 — `[CODE]` On `agent/fix-stale-invite-legacy`: `store.ts` coerces
+  legacy participant/restaurant docs to the current shape; `netlify.toml` pins
+  `NODE_VERSION = "22"` so Netlify builds don't silently fall back to old output.
 
 - 2026-09-10 — `[TOOL]` Round 3 merged (fast-forward) into `main` and pushed to
   `origin`; branch `agent/time-only-half-hour` kept locally.
