@@ -1,10 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeTime, rankOptions } from "../shared/decide.ts";
+import { rankOptions } from "../shared/decide.ts";
+import { isTimeSlot, TIME_SLOTS } from "../shared/times.ts";
 import type { Participant, Restaurant } from "../shared/types.ts";
 
-const T1 = "2026-09-11T19:00:00.000Z";
-const T2 = "2026-09-12T19:00:00.000Z";
+const T1 = "19:00";
+const T2 = "20:00";
 
 const person = (
   id: string,
@@ -27,11 +28,19 @@ const place = (id: string, cuisines: string[]): Restaurant => ({
   addedBy: "host",
 });
 
-test("normalizeTime rounds down to the minute", () => {
-  assert.equal(
-    normalizeTime("2026-09-11T19:00:42.123Z"),
-    "2026-09-11T19:00:00.000Z",
-  );
+test("TIME_SLOTS is every half hour, in order", () => {
+  assert.equal(TIME_SLOTS.length, 48);
+  assert.equal(TIME_SLOTS[0], "00:00");
+  assert.equal(TIME_SLOTS[1], "00:30");
+  assert.equal(TIME_SLOTS[47], "23:30");
+});
+
+test("isTimeSlot accepts half hours and rejects others", () => {
+  assert.ok(isTimeSlot("19:00"));
+  assert.ok(isTimeSlot("19:30"));
+  assert.ok(!isTimeSlot("19:15"));
+  assert.ok(!isTimeSlot("25:00"));
+  assert.ok(!isTimeSlot("7:00"));
 });
 
 test("no free times anywhere yields no options", () => {

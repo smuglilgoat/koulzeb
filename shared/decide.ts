@@ -1,14 +1,9 @@
 import type { Participant, RankedOption, Restaurant } from "./types.ts";
 
-/** Round a timestamp down to the minute so near-identical picks still match. */
-export function normalizeTime(iso: string): string {
-  const ms = Date.parse(iso);
-  return new Date(Math.floor(ms / 60000) * 60000).toISOString();
-}
-
 /**
  * Cross freely-chosen availability with cuisine preferences and the restaurant
- * list. Candidate times are the union of every participant's `freeTimes`.
+ * list. Candidate times are the union of every participant's `freeTimes`
+ * (30-minute time-of-day slots).
  *
  * Only participants who are free at a given time count toward that time's
  * cuisine match, since someone who cannot attend cannot veto the cuisine.

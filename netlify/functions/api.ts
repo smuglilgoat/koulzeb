@@ -1,4 +1,5 @@
-import { normalizeTime, rankOptions } from "../../shared/decide.ts";
+import { rankOptions } from "../../shared/decide.ts";
+import { isTimeSlot, TIME_SLOTS } from "../../shared/times.ts";
 import type {
   Participant,
   PublicParticipant,
@@ -65,17 +66,11 @@ function publicSession(meta: SessionMeta, session: Session): PublicSession {
   };
 }
 
-/** Parse, validate and de-duplicate a list of freely chosen times. */
+/** Validate and de-duplicate a list of freely chosen 30-minute time slots. */
 function parseFreeTimes(raw: unknown): string[] | null {
-  const items = strArray(raw, 40, 40);
-  if (!items) return null;
-  const times: string[] = [];
-  for (const item of items) {
-    const ms = Date.parse(item);
-    if (Number.isNaN(ms)) return null;
-    times.push(new Date(Math.floor(ms / 60000) * 60000).toISOString());
-  }
-  return [...new Set(times)].sort();
+  const items = strArray(raw, TIME_SLOTS.length, 5);
+  if (!items || !items.every(isTimeSlot)) return null;
+  return [...new Set(items)].sort();
 }
 
 /** Resolve the caller from their id + token headers, if valid. */
@@ -213,21 +208,19 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
       if (me.id !== meta.hostId) return bad("Only the host can decide", 403);
       const body = await readJson(req);
       const restaurantId = body && str(body.restaurantId, 64);
-      const time = body && str(body.time, 40);
+      const time = body && str(body.time, 5);
       const restaurants = await db.listRestaurants(sid);
       if (!restaurantId || !restaurants.some((r) => r.id === restaurantId)) {
         return bad("Unknown restaurant");
       }
       const participants = await db.listParticipants(sid);
-      const times = new Set(
-        participants.flatMap((p) => p.freeTimes),
-      );
-      if (!time || !times.has(normalizeTime(time))) {
+      const times = new Set(participants.flatMap((p) => p.freeTimes));
+      if (!time || !isTimeSlot(time) || !times.has(time)) {
         return bad("Unknown time");
       }
       meta.decision = {
         restaurantId,
-        time: normalizeTime(time),
+        time,
         decidedAt: Date.now(),
       };
       meta.status = "decided";

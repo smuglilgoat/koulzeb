@@ -11,6 +11,10 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DECISIONS]
 
+- 2026-09-10 — `[USER]` Round 3: times are time-of-day only (drop the date) and
+  limited to 30-minute intervals.
+- 2026-09-10 — `[ASSUMPTION]` Times are stored as "HH:MM" strings from a fixed
+  48-slot set (`shared/times.ts`); no timezone math.
 - 2026-09-10 — `[USER]` Round 2: add cuisine icons; let users choose times freely
   (no host-defined list); add Halal/Vege restaurant indicators; seed a default
   restaurant list.
@@ -29,6 +33,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [PROGRESS]
 
+- 2026-09-10 — `[TOOL]` Round 3: `npm test` → 8/8; `typecheck` and `build` clean;
+  `npm run smoke` → 22/22.
 - 2026-09-10 — `[TOOL]` Round 2: `npm test` → 7/7. `npm run typecheck` clean.
   `npm run build` clean. `npm run smoke` against `netlify dev` → 22/22.
 - 2026-09-10 — `[TOOL]` `npm test` → 8/8 pass. `npm run typecheck` → clean.
@@ -46,6 +52,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[CODE]` Round 3 committed on branch `agent/time-only-half-hour`
+  (awaiting merge/push instruction).
 - 2026-09-10 — `[TOOL]` Round 2 merged (fast-forward) into `main` and pushed to
   `origin`; branch `agent/cuisines-free-time` kept locally.
 - 2026-09-10 — `[CODE]` KoulZeb MVP committed on branch `agent/koulzeb-mvp`.

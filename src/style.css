@@ -357,7 +357,8 @@ a.ghost {
   gap: 0.5rem;
 }
 
-.add-time input {
+.add-time input,
+.add-time select {
   flex: 1;
 }
 

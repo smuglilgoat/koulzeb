@@ -25,8 +25,8 @@ function check(condition, message) {
   console.log(`ok - ${message}`);
 }
 
-const T1 = new Date("2026-09-11T19:00:00Z").toISOString();
-const T2 = new Date("2026-09-12T19:00:00Z").toISOString();
+const T1 = "19:00";
+const T2 = "20:00";
 const auth = (id, token) => ({
   "x-participant-id": id,
   "x-participant-token": token,
@@ -56,10 +56,10 @@ check(badAuth.status === 403, "rejects a bad participant token");
 const badTime = await call(
   "PATCH",
   `/api/sessions/${sessionId}/me`,
-  { freeTimes: ["not-a-date"] },
+  { freeTimes: ["19:15"] },
   auth(hostId, hostToken),
 );
-check(badTime.status === 400, "rejects an invalid free time");
+check(badTime.status === 400, "rejects a time that is not a 30-minute slot");
 
 const hostSaved = await call(
   "PATCH",

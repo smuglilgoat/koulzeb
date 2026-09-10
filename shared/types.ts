@@ -19,7 +19,7 @@ export type Participant = {
   /** Secret proving identity. Never sent to other clients in session views. */
   token: string;
   joinedAt: number;
-  /** ISO-8601 minutes the participant is free, chosen freely by them. */
+  /** Times of day ("HH:MM", 30-minute slots) the participant is free. */
   freeTimes: string[];
   cuisinePrefs: string[];
   suggestedRestaurantIds: string[];
@@ -27,7 +27,7 @@ export type Participant = {
 
 export type Decision = {
   restaurantId: string;
-  /** ISO-8601 time of the decided slot. */
+  /** Time of day of the decided slot ("HH:MM"). */
   time: string;
   decidedAt: number;
 };
@@ -55,7 +55,7 @@ export type PublicSession = SessionMeta & {
 };
 
 export type RankedOption = {
-  /** ISO-8601 time. */
+  /** Time of day ("HH:MM"). */
   time: string;
   restaurant: Restaurant;
   /** Number of participants free at this time. */

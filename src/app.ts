@@ -1,4 +1,5 @@
 import { CUISINES, cuisineIcon } from "../shared/cuisines.ts";
+import { TIME_SLOTS } from "../shared/times.ts";
 import type { Restaurant } from "../shared/types.ts";
 import { ApiError, api, type SessionData } from "./api.ts";
 import {
@@ -30,16 +31,6 @@ function esc(value: string): string {
         "'": "&#39;",
       })[c] as string,
   );
-}
-
-function fmt(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function route(): { page: "home" } | { page: "session"; sid: string } {
@@ -160,7 +151,7 @@ function renderSession(sid: string): void {
     ? mine
         .map(
           (t) => `<li class="time-row">
-            <span>${esc(fmt(t))}</span>
+            <span>${esc(t)}</span>
             <button type="button" class="ghost icon" data-action="remove-free-time"
               data-time="${esc(t)}" aria-label="Remove time">&times;</button>
           </li>`,
@@ -174,7 +165,7 @@ function renderSession(sid: string): void {
         ${suggested
           .map(
             (t) => `<button type="button" class="chip" data-action="add-suggested"
-              data-time="${esc(t)}">+ ${esc(fmt(t))}</button>`,
+              data-time="${esc(t)}">+ ${esc(t)}</button>`,
           )
           .join("")}
       </div>`
@@ -217,7 +208,7 @@ function renderSession(sid: string): void {
           <strong>${esc(option.restaurant.name)}</strong>
           <span class="badges">${badges(option.restaurant)}</span>
         </div>
-        <div class="muted small">${esc(fmt(option.time))} · ${option.freeCount} free · ${option.matchedCount} cuisine match${option.matchedCount === 1 ? "" : "es"}</div>
+        <div class="muted small">${esc(option.time)} · ${option.freeCount} free · ${option.matchedCount} cuisine match${option.matchedCount === 1 ? "" : "es"}</div>
         <div class="muted small">${option.attendees.map(esc).join(", ") || "nobody free"}</div>
       </div>
       ${
@@ -246,7 +237,7 @@ function renderSession(sid: string): void {
 
   ${
     decided && decidedOption
-      ? `<section class="banner">🎉 Decided: <strong>${esc(decidedOption.restaurant.name)}</strong> at ${esc(fmt(decidedOption.time))} — ${esc(decidedOption.attendees.join(", ") || "nobody")}</section>`
+      ? `<section class="banner">🎉 Decided: <strong>${esc(decidedOption.restaurant.name)}</strong> at ${esc(decidedOption.time)} — ${esc(decidedOption.attendees.join(", ") || "nobody")}</section>`
       : ""
   }
 
@@ -273,7 +264,9 @@ function renderSession(sid: string): void {
               <legend>When are you free?</legend>
               <ul class="plain times">${myTimes}</ul>
               <div class="add-time">
-                <input type="datetime-local" id="new-time" />
+                <select id="new-time">
+                  ${TIME_SLOTS.map((t) => `<option value="${t}"${t === "19:00" ? " selected" : ""}>${t}</option>`).join("")}
+                </select>
                 <button type="button" class="ghost" data-action="add-free-time">Add time</button>
               </div>
               ${suggestionChips}
@@ -378,12 +371,10 @@ async function onClick(event: Event): Promise<void> {
   const { action } = button.dataset;
 
   if (action === "add-free-time") {
-    const input = document.getElementById("new-time") as HTMLInputElement | null;
-    if (!input?.value) return;
-    const time = new Date(input.value);
-    if (Number.isNaN(time.getTime())) return;
+    const select = document.getElementById("new-time") as HTMLSelectElement | null;
+    if (!select?.value) return;
     draft = draft ?? { freeTimes: [], cuisinePrefs: [] };
-    draft.freeTimes = [...new Set([...draft.freeTimes, time.toISOString()])].sort();
+    draft.freeTimes = [...new Set([...draft.freeTimes, select.value])].sort();
     rerender();
     return;
   }
