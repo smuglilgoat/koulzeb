@@ -93,8 +93,9 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
-- 2026-09-10 — `[CODE]` Round 7 (Google Places search) committed on branch
-  `agent/places-api`; needs `GOOGLE_PLACES_API_KEY` set in Netlify to function.
+- 2026-09-10 — `[TOOL]` Round 7 (Google Places search) merged (fast-forward) into
+  `main` and pushed to `origin`. Still needs `GOOGLE_PLACES_API_KEY` set in
+  Netlify to return results.
 - 2026-09-10 — `[TOOL]` Round 6 (tabs) merged (fast-forward) into `main` and
   pushed to `origin`.
 - 2026-09-10 — `[TOOL]` Round 5 (playful UI) merged (fast-forward) into `main`
