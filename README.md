@@ -51,8 +51,10 @@ set it under **Site configuration > Environment variables**. Build command
 
 ## Google Places search setup
 
-Restaurant search uses **Places API (New) — Text Search**, called from the
-Netlify Function (the key never reaches the browser). To turn it on:
+Restaurant ideas use **Places API (New) — Text Search**, called from the
+Netlify Function (the key never reaches the browser). When a participant saves
+their cuisines, the app queries "`<cuisine>` restaurant in `<session city>`" for
+each cuisine and offers the results to add. To turn it on:
 
 1. **Project + billing.** At <https://console.cloud.google.com>, create/select a
    project and enable billing. Maps Platform requires a billing account even to
@@ -82,7 +84,8 @@ fields you request**:
 So "10k free" only applies to ids-only. Name/address/map-link needs Pro (5k);
 rating/price needs Enterprise (1k). The app:
 
-- **caches** each search for 7 days in Blobs, so repeat searches don't call Google;
+- **caches** each (cuisine, city) query for 7 days in Blobs, so it's one Google
+  call per cuisine per city no matter how many people share it;
 - enforces a **hard monthly cap** (`PLACES_MONTHLY_LIMIT`, default `5000`) and
   refuses further calls once reached, returning a friendly message.
 
@@ -95,11 +98,14 @@ per-minute/day, so this app-level counter is the reliable monthly guard.
 
 ## How it works
 
-1. Host creates a session (dinner name + their own name) and shares the link.
+1. Host creates a session (dinner name, their own name, and the city) and
+   shares the link.
 2. Guests join with just a name.
 3. Everyone freely adds the times they're free — time-of-day only (no dates), in
-   30-minute slots — and the cuisines they like, and searches Google for
-   restaurants (or adds one by hand). Every restaurant shows a Google Maps link.
+   30-minute slots — and the cuisines they like. On save, KoulZeb quietly asks
+   Google Places for the **top 10 places per chosen cuisine** in that city, and
+   the participant ticks which ones to add to the dinner's suggestion list. Each
+   restaurant shows a Google Maps link.
    A friendly progress bar shows who still needs to answer, so you can nudge them.
    The session page groups things into tabs (My picks / Places / Picks) with the
    header pinned on top, so there's little scrolling.
@@ -124,7 +130,7 @@ scripts/smoke.mjs       end-to-end API smoke test
 ## Data model (Netlify Blobs store `koulzeb`)
 
 ```
-s:<sessionId>                 session meta (name, host, status, decision)
+s:<sessionId>                 session meta (name, city, host, status, decision)
 p:<sessionId>:<participantId> participant (free times, cuisines, suggestions)
 r:<sessionId>:<restaurantId>  restaurant (name, cuisines, address, halal/vege)
 ```
@@ -141,5 +147,6 @@ counted under `places-usage:<YYYY-MM>`.
 - Times are time-of-day only (no dates), constrained to 30-minute slots.
 - Map links are generated from name/address unless an explicit http(s) link is
   set; explicit links are validated to http(s) and re-guarded at render.
-- Places search is cached and capped app-side (see above); rating/price are
-  opt-in because they drop the free tier from 5,000 to 1,000 calls/month.
+- Places candidates are cached per (cuisine, city) and capped app-side (see
+  above); rating/price are opt-in because they drop the free tier from 5,000 to
+  1,000 calls/month.

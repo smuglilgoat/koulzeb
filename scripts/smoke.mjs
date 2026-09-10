@@ -35,6 +35,7 @@ const auth = (id, token) => ({
 const created = await call("POST", "/api/sessions", {
   name: "Smoke dinner",
   hostName: "Host",
+  location: "Paris",
 });
 check(created.status === 201, "create session returns 201 (no host-chosen times)");
 const { sessionId, participantId: hostId, token: hostToken } = created.data;
@@ -121,30 +122,51 @@ check(
   "results include a time only one person is free at",
 );
 
-const noAuthPlaces = await call(
-  "GET",
-  `/api/sessions/${sessionId}/places?q=ramen`,
-);
-check(noAuthPlaces.status === 403, "places search requires a participant");
+const noAuthPlaces = await call("GET", `/api/sessions/${sessionId}/places`);
+check(noAuthPlaces.status === 403, "places candidates require a participant");
 
-const shortPlaces = await call(
-  "GET",
-  `/api/sessions/${sessionId}/places?q=a`,
-  undefined,
-  auth(hostId, hostToken),
+const setLoc = await call(
+  "PATCH",
+  `/api/sessions/${sessionId}`,
+  { location: "Lyon" },
+  auth(guestId, guestToken),
 );
-check(shortPlaces.status === 400, "places search rejects a too-short query");
+check(
+  setLoc.status === 200 && setLoc.data.location === "Lyon",
+  "a participant can set the dinner location",
+);
 
-const placesSearch = await call(
+const places = await call(
   "GET",
-  `/api/sessions/${sessionId}/places?q=ramen`,
+  `/api/sessions/${sessionId}/places`,
   undefined,
   auth(hostId, hostToken),
 );
 check(
-  [200, 503].includes(placesSearch.status),
-  "places search succeeds or reports itself unconfigured (no API key)",
+  [200, 503].includes(places.status),
+  "candidates succeed or report themselves unconfigured (no API key)",
 );
+
+// A session with no location, and a participant with cuisines, must be asked
+// for a location before any Places call is made.
+const noLoc = await call("POST", "/api/sessions", {
+  name: "No location",
+  hostName: "Host",
+});
+const locAuth = auth(noLoc.data.participantId, noLoc.data.token);
+await call(
+  "PATCH",
+  `/api/sessions/${noLoc.data.sessionId}/me`,
+  { cuisinePrefs: ["Thai"] },
+  locAuth,
+);
+const noLocPlaces = await call(
+  "GET",
+  `/api/sessions/${noLoc.data.sessionId}/places`,
+  undefined,
+  locAuth,
+);
+check(noLocPlaces.status === 409, "candidates wait for a location");
 
 const badMap = await call(
   "PATCH",

@@ -96,6 +96,7 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
       const body = await readJson(req);
       const name = body && str(body.name, 80);
       const hostName = body && str(body.hostName, 40);
+      const location = body && str(body.location, 80);
       if (!name || !hostName) {
         return bad("A session name and your name are required");
       }
@@ -116,6 +117,7 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
         createdAt: Date.now(),
         hostId: host.id,
         status: "collecting",
+        ...(location ? { location } : {}),
       };
       await db.createSession(meta, host);
       return json(
@@ -159,16 +161,33 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
 
     const me = await auth(req, sid);
 
-    // GET /api/sessions/:id/places?q=...
+    // GET /api/sessions/:id/places  -> candidates from the caller's cuisines
     if (action === "places" && req.method === "GET") {
       if (!me) return bad("You are not a participant in this session", 403);
-      const query = (url.searchParams.get("q") ?? "").trim();
-      if (query.length < 2 || query.length > 80) {
-        return bad("Search needs between 2 and 80 characters");
+      if (me.cuisinePrefs.length === 0) {
+        return json({ location: meta.location ?? "", groups: [], cached: true });
       }
-      const result = await places.search(query);
+      if (!meta.location) {
+        return bad("Set a location for this dinner first", 409);
+      }
+      const result = await places.candidates(me.cuisinePrefs, meta.location);
       if (!result.ok) return bad(result.error, result.status);
-      return json({ places: result.places, cached: result.cached });
+      return json({
+        location: meta.location,
+        groups: result.groups,
+        cached: result.cached,
+      });
+    }
+
+    // PATCH /api/sessions/:id  -> set the dinner location
+    if (!action && req.method === "PATCH") {
+      if (!me) return bad("You are not a participant in this session", 403);
+      const body = await readJson(req);
+      const newLocation = body && str(body.location, 80);
+      if (!newLocation) return bad("A location is required");
+      meta.location = newLocation;
+      await db.saveSessionMeta(meta);
+      return json({ location: meta.location });
     }
 
     // PATCH /api/sessions/:id/me

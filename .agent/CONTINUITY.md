@@ -11,6 +11,14 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DECISIONS]
 
+- 2026-09-10 — `[USER]` Round 8 (clarification of Round 7): once a participant
+  saves their picks, automatically query Google Places and offer the **top 10
+  places per chosen cuisine**; the participant selects which to add to the
+  suggestion list. Free-text search was not what was wanted.
+- 2026-09-10 — `[ASSUMPTION]` Sessions now carry a `location` (city), set at
+  creation and editable via `PATCH /api/sessions/:id`. One cached Text Search per
+  `${cuisine} restaurant in ${city}`; top 10 in Google relevance order. Auto-fetch
+  happens after saving choices and when opening the Places tab.
 - 2026-09-10 — `[USER]` Round 7: switch the restaurant list to Google Places API,
   cap calls so it stays free, and guide setup.
 - 2026-09-10 — `[TOOL]` Verified GMP pricing (updated 2026-09-01): Places Text
@@ -58,6 +66,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [PROGRESS]
 
+- 2026-09-10 — `[TOOL]` Round 8: `typecheck`/`build` clean; `npm test` 12/12;
+  `smoke` 28/28 (candidates auth/409/503 paths + location set).
 - 2026-09-10 — `[TOOL]` Round 7: `typecheck`/`build` clean; `npm test` 12/12;
   `smoke` 27/27 (incl. places search 403/400/503 paths).
 - 2026-09-10 — `[TOOL]` Round 6: `typecheck`/`build` clean; `npm test` 12/12;
@@ -93,6 +103,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[CODE]` Round 8 (Places candidates) committed on branch
+  `agent/places-candidates` (awaiting merge/push instruction).
 - 2026-09-10 — `[TOOL]` Round 7 (Google Places search) merged (fast-forward) into
   `main` and pushed to `origin`. Still needs `GOOGLE_PLACES_API_KEY` set in
   Netlify to return results.

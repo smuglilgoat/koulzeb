@@ -37,6 +37,8 @@ export type Decision = {
 export type SessionMeta = {
   id: string;
   name: string;
+  /** Where the dinner happens (city), used to search for restaurant ideas. */
+  location?: string;
   createdAt: number;
   hostId: string;
   status: "collecting" | "decided";

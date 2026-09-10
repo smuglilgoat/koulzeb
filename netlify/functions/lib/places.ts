@@ -170,3 +170,35 @@ export async function search(query: string): Promise<PlacesSearch> {
   await s.setJSON(cacheKey, { at: Date.now(), places });
   return { ok: true, places, cached: false };
 }
+
+export type CandidateGroup = { tag: string; places: PlaceResult[] };
+
+export type Candidates =
+  | { ok: true; groups: CandidateGroup[]; cached: boolean }
+  | { ok: false; status: number; error: string };
+
+/**
+ * For each cuisine tag, fetch the top places near `location` (Google's
+ * relevance order, up to 10). Each tag is one cached Text Search call.
+ */
+export async function candidates(
+  tags: string[],
+  location: string,
+): Promise<Candidates> {
+  const uniqueTags = [...new Set(tags.map((t) => t.trim()).filter(Boolean))];
+  const groups: CandidateGroup[] = [];
+  let anyFresh = false;
+
+  for (const tag of uniqueTags) {
+    const result = await search(`${tag} restaurant in ${location}`);
+    if (!result.ok) {
+      // Return what we have if we already gathered some; otherwise the error.
+      if (groups.length > 0) break;
+      return result;
+    }
+    anyFresh ||= !result.cached;
+    groups.push({ tag, places: result.places.slice(0, 10) });
+  }
+
+  return { ok: true, groups, cached: !anyFresh };
+}

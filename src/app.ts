@@ -8,6 +8,7 @@ import {
   getSavedName,
   setIdentity,
   setSavedName,
+  type Identity,
 } from "./state.ts";
 
 const POLL_MS = 5000;
@@ -20,8 +21,8 @@ let draft: { freeTimes: string[]; cuisinePrefs: string[] } | null = null;
 let editingId: string | null = null;
 type Tab = "me" | "places" | "picks";
 let activeTab: Tab = "me";
-let placeResults: PlaceResult[] | null = null;
-let placesQuery = "";
+let candidateGroups: { tag: string; places: PlaceResult[] }[] | null = null;
+let candidatesError: string | null = null;
 
 const AVATARS = ["🐱", "🐶", "🐼", "🦊", "🐸", "🐵", "🦁", "🐷", "🐻", "🐨", "🐯", "🐮"];
 
@@ -137,6 +138,9 @@ function renderHome(): void {
       </label>
       <label>What should we call you?
         <input name="hostName" required maxlength="40" value="${esc(getSavedName())}" placeholder="Amine" />
+      </label>
+      <label>Where are we eating? (city)
+        <input name="location" maxlength="80" placeholder="Paris" />
       </label>
       <button type="submit" class="big">Create it! 🚀</button>
     </form>
@@ -350,38 +354,49 @@ function renderSession(sid: string): void {
         </section>`
       : `<section class="card"><p class="muted">Join the dinner to add your picks! 🙋</p></section>`;
 
-  const placesResults = placeResults
-    ? placeResults.length
-      ? `<ul class="plain">${placeResults
-          .map(
-            (p, i) => `<li class="restaurant">
-              <div class="row between">
-                <strong>${esc(p.name)}</strong>
-                <span class="badges">${badges(p)}</span>
-              </div>
-              ${p.address ? `<div class="muted small">📍 ${esc(p.address)}</div>` : ""}
-              <div class="cuisines">${cuisineTags(p.cuisines)}</div>
-              <div class="links">
-                ${p.mapUrl ? `<a class="map-link" href="${esc(p.mapUrl)}" target="_blank" rel="noopener">🗺️ Map</a>` : ""}
-                <button type="button" class="big small" data-action="add-place" data-index="${i}">➕ Add</button>
-              </div>
-            </li>`,
-          )
-          .join("")}</ul>`
-      : `<p class="muted small">Hmm, nothing found. Try another search. 🔍</p>`
-    : "";
+  const candidateSection = !me
+    ? ""
+    : !session.location
+      ? `<form data-form="set-location" class="search">
+          <input name="location" maxlength="80" placeholder="Where are we eating? e.g. Paris" />
+          <button type="submit" class="big small">Set 📍</button>
+        </form>`
+      : me.cuisinePrefs.length === 0
+        ? `<p class="muted small">Pick some cuisines in <strong>🕒 My picks</strong> and we'll fetch ideas! 😋</p>`
+        : candidatesError
+          ? `<p class="nudge">😢 ${esc(candidatesError)}</p>`
+          : candidateGroups === null
+            ? `<p class="muted small">Cooking up ideas… 🍳</p>`
+            : candidateGroups.length === 0
+              ? `<p class="muted small">No ideas yet — save your cuisines again.</p>`
+              : `<form data-form="add-candidates">
+                  ${candidateGroups
+                    .map(
+                      (g, gi) => `<h3 class="form-title">${cuisineIcon(g.tag)} ${esc(g.tag)} <span class="muted small">top ${g.places.length}</span></h3>
+                      <ul class="plain">${g.places
+                        .map(
+                          (p, pi) => `<li class="restaurant">
+                            <label class="choice">
+                              <input type="checkbox" name="candidate" value="${gi}:${pi}" />
+                              <span><strong>${esc(p.name)}</strong></span>
+                            </label>
+                            ${p.address ? `<div class="muted small">📍 ${esc(p.address)}</div>` : ""}
+                            <div class="cuisines">${cuisineTags(p.cuisines)}<span class="badges">${badges(p)}</span></div>
+                          </li>`,
+                        )
+                        .join("")}</ul>`,
+                    )
+                    .join("")}
+                  <button type="submit" class="big">Add selected ✅</button>
+                </form>`;
 
   const placesSection = `<section class="card">
     <h2>🍕 Places to eat</h2>
+    <p class="muted small">${session.location ? `📍 ${esc(session.location)} · ` : ""}Ideas from Google Places for the cuisines you picked (cached to save our free quota).</p>
+    ${candidateSection}
     ${
       me
-        ? `<form data-form="places-search" class="search">
-            <input name="q" maxlength="80" placeholder="Search Google: ramen, tagine, sushi…" value="${esc(placesQuery)}" />
-            <button type="submit" class="big small">Search 🔍</button>
-          </form>
-          <p class="muted small">Results come from Google Places and are cached to save our free quota.</p>
-          ${placesResults}
-          <details class="add-manual">
+        ? `<details class="add-manual">
             <summary>➕ Add a place yourself</summary>
             <form data-form="restaurant" class="stack">
               ${restaurantFields()}
@@ -413,6 +428,7 @@ function renderSession(sid: string): void {
       <div>
         <h1 class="tight">🍽️ ${esc(session.name)}</h1>
         <p class="muted small">${me ? `You're ${esc(me.name)}${me.id === session.hostId ? " — the boss 👑" : ""}` : "You're just looking 👀"}</p>
+        ${session.location ? `<p class="muted small">📍 ${esc(session.location)}</p>` : ""}
       </div>
       <button class="big small" data-action="share">📣 Invite</button>
     </div>
@@ -445,6 +461,19 @@ async function loadSession(sid: string): Promise<void> {
   }
 }
 
+/** Fetch restaurant ideas from the caller's saved cuisines (cached server-side). */
+async function loadCandidates(sid: string, identity: Identity): Promise<void> {
+  try {
+    const result = await api.getCandidates(sid, identity);
+    candidateGroups = result.groups;
+    candidatesError = null;
+  } catch (error) {
+    candidateGroups = [];
+    candidatesError =
+      error instanceof Error ? error.message : "Could not load ideas";
+  }
+}
+
 function startPolling(sid: string): void {
   window.clearInterval(pollTimer);
   pollTimer = window.setInterval(() => void loadSession(sid), POLL_MS);
@@ -455,8 +484,8 @@ function startPolling(sid: string): void {
 async function render(): Promise<void> {
   window.clearInterval(pollTimer);
   activeTab = "me";
-  placeResults = null;
-  placesQuery = "";
+  candidateGroups = null;
+  candidatesError = null;
   const current = route();
   if (current.page === "home") {
     data = null;
@@ -517,30 +546,26 @@ async function onClick(event: Event): Promise<void> {
   if (action === "tab") {
     activeTab = (button.dataset.tab as Tab) ?? "me";
     editingId = null;
-    rerender();
-    return;
-  }
-  if (action === "add-place") {
-    const sid = currentSid();
-    const identity = sid ? getIdentity(sid) : null;
-    const place = placeResults?.[Number(button.dataset.index)];
-    if (!sid || !identity || !place) return;
-    busy(true);
-    try {
-      await api.addRestaurant(sid, identity, {
-        name: place.name,
-        cuisines: place.cuisines,
-        address: place.address,
-        mapUrl: place.mapUrl,
-      });
-      placeResults = null;
-      status("Added! 🍽️");
-      await loadSession(sid);
-    } catch (error) {
-      status(error instanceof Error ? error.message : "Could not add");
-    } finally {
-      busy(false);
+    if (activeTab === "places") {
+      const sid = currentSid();
+      const identity = sid ? getIdentity(sid) : null;
+      const meNow = data?.session.participants.find(
+        (p) => p.id === identity?.participantId,
+      );
+      if (
+        sid &&
+        identity &&
+        meNow &&
+        data?.session.location &&
+        meNow.cuisinePrefs.length > 0 &&
+        candidateGroups === null
+      ) {
+        busy(true);
+        await loadCandidates(sid, identity);
+        busy(false);
+      }
     }
+    rerender();
     return;
   }
   if (action === "edit-restaurant") {
@@ -599,6 +624,7 @@ async function onSubmit(event: Event): Promise<void> {
       const result = await api.createSession({
         name: String(values.get("sessionName") ?? ""),
         hostName: String(values.get("hostName") ?? ""),
+        location: String(values.get("location") ?? "").trim() || undefined,
       });
       setSavedName(String(values.get("hostName") ?? ""));
       setIdentity(result.sessionId, {
@@ -623,24 +649,59 @@ async function onSubmit(event: Event): Promise<void> {
     if (!sid) return;
     const identity = getIdentity(sid);
 
-    if (kind === "places-search") {
+    if (kind === "set-location") {
       if (!identity) return;
-      const query = String(values.get("q") ?? "").trim();
-      placesQuery = query;
-      if (query.length < 2) {
-        status("Type at least 2 letters 🔍");
+      const location = String(values.get("location") ?? "").trim();
+      if (!location) {
+        status("Where to? 🗺️");
         return;
       }
       busy(true);
       try {
-        const result = await api.searchPlaces(sid, identity, query);
-        placeResults = result.places;
-        status(result.cached ? "Found them (cached) 🎯" : "Found some places! 🎯");
+        await api.setLocation(sid, identity, location);
+        await loadSession(sid);
+        await loadCandidates(sid, identity);
+        rerender();
       } catch (error) {
-        placeResults = null;
-        status(error instanceof Error ? error.message : "Search failed");
+        status(error instanceof Error ? error.message : "Could not set location");
+      } finally {
+        busy(false);
       }
-      rerender();
+      return;
+    }
+
+    if (kind === "add-candidates") {
+      if (!identity || !candidateGroups) return;
+      const checked = [
+        ...root.querySelectorAll<HTMLInputElement>(
+          'input[name="candidate"]:checked',
+        ),
+      ];
+      if (checked.length === 0) {
+        status("Pick at least one! 🤏");
+        return;
+      }
+      busy(true);
+      try {
+        for (const input of checked) {
+          const [gi, pi] = input.value.split(":").map(Number);
+          const place = candidateGroups[gi]?.places[pi];
+          if (!place) continue;
+          await api.addRestaurant(sid, identity, {
+            name: place.name,
+            cuisines: place.cuisines,
+            address: place.address,
+            mapUrl: place.mapUrl,
+          });
+        }
+        candidateGroups = null;
+        status("Added! 🍽️");
+        await loadSession(sid);
+      } catch (error) {
+        status(error instanceof Error ? error.message : "Could not add");
+      } finally {
+        busy(false);
+      }
       return;
     }
 
@@ -666,6 +727,8 @@ async function onSubmit(event: Event): Promise<void> {
       syncCuisines();
       await api.saveMe(sid, identity, draft ?? { freeTimes: [], cuisinePrefs: [] });
       status("Yum! Saved ✅");
+      await loadCandidates(sid, identity);
+      rerender();
       return;
     }
 

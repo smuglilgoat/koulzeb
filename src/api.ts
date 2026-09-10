@@ -34,7 +34,11 @@ export type SessionData = {
 };
 
 export const api = {
-  createSession(input: { name: string; hostName: string }) {
+  createSession(input: {
+    name: string;
+    hostName: string;
+    location?: string;
+  }) {
     return request<{
       sessionId: string;
       participantId: string;
@@ -125,10 +129,19 @@ export const api = {
     });
   },
 
-  searchPlaces(sid: string, identity: Identity, query: string) {
-    return request<{ places: PlaceResult[]; cached: boolean }>(
-      `/sessions/${sid}/places?q=${encodeURIComponent(query)}`,
-      { headers: auth(identity) },
-    );
+  getCandidates(sid: string, identity: Identity) {
+    return request<{
+      location: string;
+      groups: { tag: string; places: PlaceResult[] }[];
+      cached: boolean;
+    }>(`/sessions/${sid}/places`, { headers: auth(identity) });
+  },
+
+  setLocation(sid: string, identity: Identity, location: string) {
+    return request<{ location: string }>(`/sessions/${sid}`, {
+      method: "PATCH",
+      headers: auth(identity),
+      body: JSON.stringify({ location }),
+    });
   },
 };
