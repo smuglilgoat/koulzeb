@@ -67,8 +67,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
-- 2026-09-10 — `[CODE]` Round 4 committed on branch `agent/maps-link-edit`
-  (awaiting merge/push instruction).
+- 2026-09-10 — `[TOOL]` Round 4 merged (fast-forward) into `main` and pushed to
+  `origin`.
 - 2026-09-10 — `[TOOL]` Fix merged (fast-forward) into `main` and pushed to
   `origin`. The stale invite error still requires a **frontend redeploy + hard
   refresh** to clear the old bundle; the code fix alone doesn't update clients.
