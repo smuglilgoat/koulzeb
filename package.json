@@ -1,0 +1,29 @@
+{
+  "name": "koulzeb",
+  "version": "1.0.0",
+  "description": "Group dinner-out planner: pick a time and cuisine, collect restaurant suggestions, and converge on where and when to eat.",
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "dev:web": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "keywords": [
+    "dinner",
+    "planning",
+    "netlify"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@netlify/blobs": "^11.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "netlify-cli": "^27.5.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.2"
+  }
+}

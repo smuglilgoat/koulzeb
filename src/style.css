@@ -1,0 +1,294 @@
+:root {
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --ink: #241c15;
+  --muted: #8a7d6d;
+  --line: #e8e0d5;
+  --accent: #b5451b;
+  --accent-ink: #ffffff;
+  --ok: #1f7a4d;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+#app {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card,
+.banner {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.banner {
+  background: #eefaf1;
+  border-color: #bfe6cd;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0.5rem 0;
+}
+
+h1.tight {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.82rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.between {
+  justify-content: space-between;
+}
+
+.stack,
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+input,
+select {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: inherit;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+legend {
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0 0.35rem;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  padding: 0.6rem 0.9rem;
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+button.primary.small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+button.ghost {
+  background: #fff;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+button.icon {
+  padding: 0.35rem 0.55rem;
+  line-height: 1;
+}
+
+.time-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.time-row .time-input {
+  flex: 1;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.choice,
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.5rem 0.65rem;
+}
+
+.choice {
+  justify-content: space-between;
+}
+
+.choice span:first-of-type {
+  flex: 1;
+}
+
+.choice input,
+.pill input {
+  width: auto;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pill {
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.plain {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.restaurant {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.5rem;
+}
+
+.options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+}
+
+.option.is-decided {
+  border-color: #bfe6cd;
+  background: #eefaf1;
+}
+
+.option-rank {
+  font-weight: 800;
+  color: var(--muted);
+  min-width: 2rem;
+}
+
+.option-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.invite {
+  word-break: break-all;
+  margin: 0.5rem 0 0;
+}
+
+.status {
+  min-height: 1.2rem;
+  color: var(--ok);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+a.ghost {
+  align-self: flex-start;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}

@@ -1,0 +1,23 @@
+/** Curated cuisine tags offered as multi-select choices. */
+export const CUISINES = [
+  "Italian",
+  "French",
+  "Japanese",
+  "Chinese",
+  "Thai",
+  "Indian",
+  "Mexican",
+  "Mediterranean",
+  "Middle Eastern",
+  "American",
+  "Pizza",
+  "Burger",
+  "Seafood",
+  "Vegetarian",
+  "Vegan",
+  "Korean",
+  "Vietnamese",
+  "Greek",
+  "Spanish",
+  "African",
+] as const;
