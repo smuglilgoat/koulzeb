@@ -103,8 +103,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
-- 2026-09-10 — `[CODE]` Round 8 (Places candidates) committed on branch
-  `agent/places-candidates` (awaiting merge/push instruction).
+- 2026-09-10 — `[TOOL]` Round 8 (Places candidates) merged (fast-forward) into
+  `main` and pushed to `origin`.
 - 2026-09-10 — `[TOOL]` Round 7 (Google Places search) merged (fast-forward) into
   `main` and pushed to `origin`. Still needs `GOOGLE_PLACES_API_KEY` set in
   Netlify to return results.
