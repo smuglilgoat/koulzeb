@@ -1,5 +1,6 @@
 import { CUISINES, cuisineIcon } from "../shared/cuisines.ts";
 import { TIME_SLOTS } from "../shared/times.ts";
+import { mapsUrl } from "../shared/maps.ts";
 import type { Restaurant } from "../shared/types.ts";
 import { ApiError, api, type SessionData } from "./api.ts";
 import {
@@ -16,6 +17,7 @@ let pollTimer: number | undefined;
 let statusTimer: number | undefined;
 let data: SessionData | null = null;
 let draft: { freeTimes: string[]; cuisinePrefs: string[] } | null = null;
+let editingId: string | null = null;
 
 /* ---------------------------------- utils --------------------------------- */
 
@@ -73,6 +75,31 @@ function cuisineTags(cuisines: string[]): string {
   return cuisines
     .map((c) => `<span class="cuisine">${cuisineIcon(c)} ${esc(c)}</span>`)
     .join("");
+}
+
+function restaurantFields(r?: Restaurant): string {
+  return `
+    <label>Name
+      <input name="restaurantName" required maxlength="80" placeholder="Chez Ali" value="${r ? esc(r.name) : ""}" />
+    </label>
+    <label>Cuisines
+      <select name="restaurantCuisines" multiple size="6">
+        ${CUISINES.map(
+          (c) =>
+            `<option value="${esc(c.name)}"${r?.cuisines.includes(c.name) ? " selected" : ""}>${c.icon} ${esc(c.name)}</option>`,
+        ).join("")}
+      </select>
+    </label>
+    <label>Address (optional)
+      <input name="restaurantAddress" maxlength="160" value="${r?.address ? esc(r.address) : ""}" />
+    </label>
+    <label>Google Maps link (optional)
+      <input name="restaurantMapUrl" maxlength="300" placeholder="https://maps.google.com/…" value="${r?.mapUrl ? esc(r.mapUrl) : ""}" />
+    </label>
+    <div class="checks">
+      <label class="pill"><input type="checkbox" name="halal"${r?.halal ? " checked" : ""} /> <span>Halal</span></label>
+      <label class="pill"><input type="checkbox" name="vege"${r?.vege ? " checked" : ""} /> <span>Vege</span></label>
+    </div>`;
 }
 
 /* ------------------------------- home (create) ----------------------------- */
@@ -182,14 +209,29 @@ function renderSession(sid: string): void {
 
   const restaurants = session.restaurants.length
     ? session.restaurants
-        .map(
-          (r) => `<li class="restaurant">
-            <div class="row between">
-              <strong>${esc(r.name)}</strong>
-              <span class="badges">${badges(r)}</span>
-            </div>
-            <div class="cuisines">${cuisineTags(r.cuisines)}${r.address ? `<span class="muted small">${esc(r.address)}</span>` : ""}</div>
-          </li>`,
+        .map((r) =>
+          r.id === editingId
+            ? `<li class="restaurant editing">
+                <form data-form="restaurant-edit">
+                  <input type="hidden" name="restaurantId" value="${r.id}" />
+                  ${restaurantFields(r)}
+                  <div class="row">
+                    <button type="submit" class="primary small">Save</button>
+                    <button type="button" class="ghost small" data-action="cancel-edit">Cancel</button>
+                  </div>
+                </form>
+              </li>`
+            : `<li class="restaurant">
+                <div class="row between">
+                  <strong>${esc(r.name)}</strong>
+                  <span class="badges">${badges(r)}</span>
+                </div>
+                <div class="cuisines">${cuisineTags(r.cuisines)}${r.address ? `<span class="muted small">${esc(r.address)}</span>` : ""}</div>
+                <div class="links">
+                  <a class="map-link" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener">📍 Map</a>
+                  ${me ? `<button type="button" class="ghost small" data-action="edit-restaurant" data-id="${r.id}">Edit</button>` : ""}
+                </div>
+              </li>`,
         )
         .join("")
     : `<li class="muted">No restaurants yet — add the first one.</li>`;
@@ -210,6 +252,7 @@ function renderSession(sid: string): void {
         </div>
         <div class="muted small">${esc(option.time)} · ${option.freeCount} free · ${option.matchedCount} cuisine match${option.matchedCount === 1 ? "" : "es"}</div>
         <div class="muted small">${option.attendees.map(esc).join(", ") || "nobody free"}</div>
+        <a class="map-link small" href="${esc(mapsUrl(option.restaurant))}" target="_blank" rel="noopener">📍 Map</a>
       </div>
       ${
         me?.id === session.hostId && !decided
@@ -287,21 +330,8 @@ function renderSession(sid: string): void {
     ${
       me
         ? `<form data-form="restaurant" class="stack">
-            <label>Add a restaurant
-              <input name="restaurantName" required maxlength="80" placeholder="Chez Ali" />
-            </label>
-            <label>Cuisines
-              <select name="restaurantCuisines" multiple size="6">
-                ${CUISINES.map((c) => `<option value="${esc(c.name)}">${c.icon} ${esc(c.name)}</option>`).join("")}
-              </select>
-            </label>
-            <label>Address (optional)
-              <input name="restaurantAddress" maxlength="160" />
-            </label>
-            <div class="checks">
-              <label class="pill"><input type="checkbox" name="halal" /> <span>Halal</span></label>
-              <label class="pill"><input type="checkbox" name="vege" /> <span>Vege</span></label>
-            </div>
+            <h3 class="form-title">Add a restaurant</h3>
+            ${restaurantFields()}
             <button type="submit" class="ghost">Add restaurant</button>
           </form>`
         : ""
@@ -339,11 +369,13 @@ async function render(): Promise<void> {
   if (current.page === "home") {
     data = null;
     draft = null;
+    editingId = null;
     renderHome();
     return;
   }
   data = null;
   draft = null;
+  editingId = null;
   renderSession(current.sid);
   await loadSession(current.sid);
   startPolling(current.sid);
@@ -387,6 +419,16 @@ async function onClick(event: Event): Promise<void> {
   if (action === "add-suggested") {
     draft = draft ?? { freeTimes: [], cuisinePrefs: [] };
     draft.freeTimes = [...new Set([...draft.freeTimes, button.dataset.time as string])].sort();
+    rerender();
+    return;
+  }
+  if (action === "edit-restaurant") {
+    editingId = button.dataset.id ?? null;
+    rerender();
+    return;
+  }
+  if (action === "cancel-edit") {
+    editingId = null;
     rerender();
     return;
   }
@@ -485,21 +527,33 @@ async function onSubmit(event: Event): Promise<void> {
       return;
     }
 
-    if (kind === "restaurant") {
+    if (kind === "restaurant" || kind === "restaurant-edit") {
       const select = form.querySelector<HTMLSelectElement>(
         'select[name="restaurantCuisines"]',
       );
       const cuisines = select
         ? [...select.selectedOptions].map((o) => o.value)
         : [];
-      await api.addRestaurant(sid, identity, {
+      const input = {
         name: String(values.get("restaurantName") ?? ""),
         cuisines,
         address: String(values.get("restaurantAddress") ?? "") || undefined,
+        mapUrl: String(values.get("restaurantMapUrl") ?? "") || undefined,
         halal: values.get("halal") === "on",
         vege: values.get("vege") === "on",
-      });
-      form.reset();
+      };
+      if (kind === "restaurant-edit") {
+        await api.editRestaurant(
+          sid,
+          identity,
+          String(values.get("restaurantId") ?? ""),
+          input,
+        );
+        editingId = null;
+      } else {
+        await api.addRestaurant(sid, identity, input);
+        form.reset();
+      }
       await loadSession(sid);
     }
   } catch (error) {

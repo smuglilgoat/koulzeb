@@ -3,6 +3,8 @@ export type Restaurant = {
   name: string;
   cuisines: string[];
   address?: string;
+  /** Explicit Google Maps (or other http(s)) link; falls back to a search. */
+  mapUrl?: string;
   notes?: string;
   rating?: number;
   price?: string;

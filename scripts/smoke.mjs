@@ -131,6 +131,53 @@ check(
   "results include a time only one person is free at",
 );
 
+const badMap = await call(
+  "PATCH",
+  `/api/sessions/${sessionId}/restaurants/${r1.data.restaurant.id}`,
+  { name: "Sushi Place", cuisines: ["Japanese"], mapUrl: "javascript:alert(1)" },
+  auth(hostId, hostToken),
+);
+check(badMap.status === 400, "rejects a non-http map link");
+
+const edited = await call(
+  "PATCH",
+  `/api/sessions/${sessionId}/restaurants/${r1.data.restaurant.id}`,
+  {
+    name: "Sushi Place 2",
+    cuisines: ["Japanese", "Sushi"],
+    address: "1 Rue Test",
+    mapUrl: "https://maps.app.goo.gl/xyz",
+    vege: true,
+  },
+  auth(hostId, hostToken),
+);
+check(edited.status === 200, "participant edits a restaurant");
+check(
+  edited.data.restaurant.name === "Sushi Place 2" &&
+    edited.data.restaurant.mapUrl === "https://maps.app.goo.gl/xyz" &&
+    edited.data.restaurant.vege === true &&
+    edited.data.restaurant.address === "1 Rue Test",
+  "edit persists name, cuisines, address, map link and vege",
+);
+check(
+  edited.data.restaurant.halal === undefined,
+  "unchecked halal is cleared on edit",
+);
+
+const seed = fetched.data.session.restaurants.find(
+  (r) => r.rating !== undefined,
+);
+const seedEdit = await call(
+  "PATCH",
+  `/api/sessions/${sessionId}/restaurants/${seed.id}`,
+  { name: `${seed.name} ★`, cuisines: seed.cuisines },
+  auth(hostId, hostToken),
+);
+check(
+  seedEdit.data.restaurant.rating === seed.rating,
+  "edit preserves seeded rating on a default restaurant",
+);
+
 const guestDecide = await call(
   "POST",
   `/api/sessions/${sessionId}/decision`,

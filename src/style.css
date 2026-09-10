@@ -394,3 +394,32 @@ a.ghost {
   pointer-events: none;
 }
 
+.links {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.map-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.map-link:hover {
+  text-decoration: underline;
+}
+
+.form-title {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.restaurant.editing {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0.7rem;
+}
+

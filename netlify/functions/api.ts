@@ -84,7 +84,7 @@ async function auth(req: Request, sid: string): Promise<Participant | null> {
 
 export default async (req: Request, _context: unknown): Promise<Response> => {
   const parts = new URL(req.url).pathname.split("/").filter(Boolean);
-  const [, resource, sid, action] = parts;
+  const [, resource, sid, action, rid] = parts;
 
   try {
     if (resource !== "sessions") return bad("Not found", 404);
@@ -178,7 +178,7 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
     }
 
     // POST /api/sessions/:id/restaurants
-    if (action === "restaurants" && req.method === "POST") {
+    if (action === "restaurants" && !rid && req.method === "POST") {
       if (!me) return bad("You are not a participant in this session", 403);
       const body = await readJson(req);
       const name = body && str(body.name, 80);
@@ -187,12 +187,17 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
         return bad("A restaurant name and cuisines are required");
       }
       const address = body && str(body.address, 160);
+      const mapUrl = body && str(body.mapUrl, 300);
+      if (mapUrl && !/^https?:\/\//i.test(mapUrl)) {
+        return bad("The map link must be an http(s) URL");
+      }
       const restaurant: Restaurant = {
         id: crypto.randomUUID(),
         name,
         cuisines,
         addedBy: me.id,
         ...(address ? { address } : {}),
+        ...(mapUrl ? { mapUrl } : {}),
         ...(body?.halal === true ? { halal: true } : {}),
         ...(body?.vege === true ? { vege: true } : {}),
       };
@@ -200,6 +205,35 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
       me.suggestedRestaurantIds.push(restaurant.id);
       await db.addParticipant(sid, me);
       return json({ restaurant }, 201);
+    }
+
+    // PATCH /api/sessions/:id/restaurants/:rid
+    if (action === "restaurants" && rid && req.method === "PATCH") {
+      if (!me) return bad("You are not a participant in this session", 403);
+      const existing = await db.getRestaurant(sid, rid);
+      if (!existing) return bad("Restaurant not found", 404);
+      const body = await readJson(req);
+      const name = body && str(body.name, 80);
+      const cuisines = body && strArray(body.cuisines, 10, 40);
+      if (!name || !cuisines) {
+        return bad("A restaurant name and cuisines are required");
+      }
+      const address = body && str(body.address, 160);
+      const mapUrl = body && str(body.mapUrl, 300);
+      if (mapUrl && !/^https?:\/\//i.test(mapUrl)) {
+        return bad("The map link must be an http(s) URL");
+      }
+      const updated: Restaurant = {
+        ...existing,
+        name,
+        cuisines,
+        address: address ?? undefined,
+        mapUrl: mapUrl ?? undefined,
+        halal: body?.halal === true ? true : undefined,
+        vege: body?.vege === true ? true : undefined,
+      };
+      await db.addRestaurant(sid, updated);
+      return json({ restaurant: updated });
     }
 
     // POST /api/sessions/:id/decision  (host only)

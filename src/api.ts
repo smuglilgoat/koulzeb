@@ -74,6 +74,7 @@ export const api = {
       name: string;
       cuisines: string[];
       address?: string;
+      mapUrl?: string;
       halal?: boolean;
       vege?: boolean;
     },
@@ -82,6 +83,29 @@ export const api = {
       `/sessions/${sid}/restaurants`,
       {
         method: "POST",
+        headers: auth(identity),
+        body: JSON.stringify(input),
+      },
+    );
+  },
+
+  editRestaurant(
+    sid: string,
+    identity: Identity,
+    restaurantId: string,
+    input: {
+      name: string;
+      cuisines: string[];
+      address?: string;
+      mapUrl?: string;
+      halal?: boolean;
+      vege?: boolean;
+    },
+  ) {
+    return request<{ restaurant: Restaurant }>(
+      `/sessions/${sid}/restaurants/${restaurantId}`,
+      {
+        method: "PATCH",
         headers: auth(identity),
         body: JSON.stringify(input),
       },

@@ -93,6 +93,16 @@ export async function addRestaurant(
   await store().setJSON(restaurantKey(sid, restaurant.id), restaurant);
 }
 
+export async function getRestaurant(
+  sid: string,
+  rid: string,
+): Promise<Restaurant | null> {
+  const restaurant = (await store().get(restaurantKey(sid, rid), {
+    type: "json",
+  })) as Restaurant | null;
+  return restaurant ? asRestaurant(restaurant) : null;
+}
+
 export async function listRestaurants(sid: string): Promise<Restaurant[]> {
   const s = store();
   const { blobs } = await s.list({ prefix: `r:${sid}:` });

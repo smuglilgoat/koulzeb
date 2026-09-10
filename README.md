@@ -51,8 +51,9 @@ Set the site's **build command** to `npm run build` and **publish directory** to
 1. Host creates a session (dinner name + their own name) and shares the link.
 2. Guests join with just a name.
 3. Everyone freely adds the times they're free — time-of-day only (no dates), in
-   30-minute slots — and the cuisines they like, and can add restaurants. New
-   sessions start with a default restaurant list.
+   30-minute slots — and the cuisines they like, and can add or edit restaurants.
+   New sessions start with a default restaurant list. Every restaurant shows a
+   Google Maps link (generated from its name/address, or an explicit link if set).
 4. The API ranks every (time, restaurant) pair: more free people first, then more
    cuisine matches, then time and name. Only people free at a time count toward
    that time's cuisine match.
@@ -88,5 +89,7 @@ New sessions are seeded with the default restaurant list in
 - Polling every 5s instead of realtime push (Blobs is pull-based).
 - Link-based access: anyone with the link can join; only the host can confirm.
 - Times are time-of-day only (no dates), constrained to 30-minute slots.
+- Map links are generated from name/address unless an explicit http(s) link is
+  set; explicit links are validated to http(s) and re-guarded at render.
 - Halal / Vege indicators on the seeded restaurants are best-effort guesses —
   correct them when adding or reviewing a restaurant.
