@@ -292,3 +292,104 @@ a.ghost {
   text-decoration: none;
   font-weight: 600;
 }
+
+.badges {
+  display: inline-flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #f1ebe1;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.badge.rating {
+  background: #fff5da;
+  color: #9a6a00;
+}
+
+.badge.halal {
+  background: #e8f5ec;
+  color: var(--ok);
+}
+
+.badge.vege {
+  background: #eaf4e5;
+  color: #3d7a1f;
+}
+
+.cuisines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.cuisine {
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.plain.times {
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.times .time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.4rem 0.6rem;
+}
+
+.add-time {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-time input {
+  flex: 1;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.chip {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px dashed var(--line);
+  background: #fff;
+  color: var(--accent);
+}
+
+.checks {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checks .pill {
+  flex: 1;
+}
+
+#app.busy {
+  opacity: 0.65;
+  pointer-events: none;
+}
+

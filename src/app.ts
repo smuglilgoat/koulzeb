@@ -1,4 +1,5 @@
-import { CUISINES } from "../shared/cuisines.ts";
+import { CUISINES, cuisineIcon } from "../shared/cuisines.ts";
+import type { Restaurant } from "../shared/types.ts";
 import { ApiError, api, type SessionData } from "./api.ts";
 import {
   getIdentity,
@@ -13,7 +14,7 @@ const root = document.getElementById("app") as HTMLElement;
 let pollTimer: number | undefined;
 let statusTimer: number | undefined;
 let data: SessionData | null = null;
-let draft: { availableSlotIds: string[]; cuisinePrefs: string[] } | null = null;
+let draft: { freeTimes: string[]; cuisinePrefs: string[] } | null = null;
 
 /* ---------------------------------- utils --------------------------------- */
 
@@ -47,6 +48,11 @@ function route(): { page: "home" } | { page: "session"; sid: string } {
   return match ? { page: "session", sid: match[1] } : { page: "home" };
 }
 
+function currentSid(): string | null {
+  const r = route();
+  return r.page === "session" ? r.sid : null;
+}
+
 function status(message: string): void {
   const el = document.getElementById("status");
   if (!el) return;
@@ -57,11 +63,25 @@ function status(message: string): void {
   }, 2500);
 }
 
-function timeRow(): string {
-  return `<div class="time-row">
-    <input class="time-input" type="datetime-local" required />
-    <button type="button" class="ghost icon" data-action="remove-time" aria-label="Remove time">&times;</button>
-  </div>`;
+function busy(on: boolean): void {
+  root.classList.toggle("busy", on);
+}
+
+function badges(r: Restaurant): string {
+  const parts: string[] = [];
+  if (r.rating !== undefined) {
+    parts.push(`<span class="badge rating">★ ${r.rating.toFixed(1)}</span>`);
+  }
+  if (r.price) parts.push(`<span class="badge">${esc(r.price)}</span>`);
+  if (r.halal) parts.push(`<span class="badge halal">Halal</span>`);
+  if (r.vege) parts.push(`<span class="badge vege">Vege</span>`);
+  return parts.join("");
+}
+
+function cuisineTags(cuisines: string[]): string {
+  return cuisines
+    .map((c) => `<span class="cuisine">${cuisineIcon(c)} ${esc(c)}</span>`)
+    .join("");
 }
 
 /* ------------------------------- home (create) ----------------------------- */
@@ -70,7 +90,7 @@ function renderHome(): void {
   root.innerHTML = `
   <section class="hero">
     <h1>Dinner out, decided together.</h1>
-    <p class="muted">Propose a few times, share one link, and let everyone weigh in on cuisine and restaurants. KoulZeb finds the overlap.</p>
+    <p class="muted">Share one link. Everyone adds the times they're free and the cuisines they like, plus restaurants. KoulZeb finds the overlap.</p>
   </section>
 
   <section class="card">
@@ -82,11 +102,6 @@ function renderHome(): void {
       <label>Your name
         <input name="hostName" required maxlength="40" value="${esc(getSavedName())}" placeholder="Amine" />
       </label>
-      <fieldset>
-        <legend>Candidate times</legend>
-        <div id="times">${timeRow()}</div>
-        <button type="button" class="ghost" data-action="add-time">+ Add another time</button>
-      </fieldset>
       <button type="submit" class="primary">Create session</button>
     </form>
   </section>
@@ -119,7 +134,7 @@ function renderSession(sid: string): void {
 
   if (identity && me && draft === null) {
     draft = {
-      availableSlotIds: [...me.availableSlotIds],
+      freeTimes: [...me.freeTimes],
       cuisinePrefs: [...me.cuisinePrefs],
     };
   }
@@ -129,29 +144,48 @@ function renderSession(sid: string): void {
   const decidedOption = decided
     ? results.find(
         (o) =>
-          o.restaurant.id === decided.restaurantId &&
-          o.timeSlot.id === decided.timeSlotId,
+          o.restaurant.id === decided.restaurantId && o.time === decided.time,
       )
     : undefined;
 
-  const slots = session.timeSlots
-    .map((slot) => {
-      const checked = draft?.availableSlotIds.includes(slot.id) ? "checked" : "";
-      const free = results.find((o) => o.timeSlot.id === slot.id)?.freeCount ?? session.participants.filter((p) => p.availableSlotIds.includes(slot.id)).length;
-      return `<label class="choice">
-        <input type="checkbox" name="slot" value="${slot.id}" ${checked} />
-        <span>${esc(fmt(slot.start))}</span>
-        <span class="muted small">${free}/${session.participants.length} free</span>
-      </label>`;
-    })
-    .join("");
+  const mine = [...(draft?.freeTimes ?? [])].sort();
+  const others = session.participants.filter(
+    (p) => p.id !== identity?.participantId,
+  );
+  const suggested = [...new Set(others.flatMap((p) => p.freeTimes))]
+    .filter((t) => !mine.includes(t))
+    .sort();
+
+  const myTimes = mine.length
+    ? mine
+        .map(
+          (t) => `<li class="time-row">
+            <span>${esc(fmt(t))}</span>
+            <button type="button" class="ghost icon" data-action="remove-free-time"
+              data-time="${esc(t)}" aria-label="Remove time">&times;</button>
+          </li>`,
+        )
+        .join("")
+    : `<li class="muted small">No times yet — add when you're free.</li>`;
+
+  const suggestionChips = suggested.length
+    ? `<div class="suggestions">
+        <span class="muted small">Others are free:</span>
+        ${suggested
+          .map(
+            (t) => `<button type="button" class="chip" data-action="add-suggested"
+              data-time="${esc(t)}">+ ${esc(fmt(t))}</button>`,
+          )
+          .join("")}
+      </div>`
+    : "";
 
   const cuisines = CUISINES.map(
     (cuisine) => `<label class="pill">
-      <input type="checkbox" name="cuisine" value="${esc(cuisine)}" ${
-        draft?.cuisinePrefs.includes(cuisine) ? "checked" : ""
+      <input type="checkbox" name="cuisine" value="${esc(cuisine.name)}" ${
+        draft?.cuisinePrefs.includes(cuisine.name) ? "checked" : ""
       } />
-      <span>${esc(cuisine)}</span>
+      <span>${cuisine.icon} ${esc(cuisine.name)}</span>
     </label>`,
   ).join("");
 
@@ -159,34 +193,43 @@ function renderSession(sid: string): void {
     ? session.restaurants
         .map(
           (r) => `<li class="restaurant">
-            <strong>${esc(r.name)}</strong>
-            <span class="muted small">${r.cuisines.map(esc).join(", ")}${r.address ? ` · ${esc(r.address)}` : ""}</span>
+            <div class="row between">
+              <strong>${esc(r.name)}</strong>
+              <span class="badges">${badges(r)}</span>
+            </div>
+            <div class="cuisines">${cuisineTags(r.cuisines)}${r.address ? `<span class="muted small">${esc(r.address)}</span>` : ""}</div>
           </li>`,
         )
         .join("")
     : `<li class="muted">No restaurants yet — add the first one.</li>`;
 
-  const resultCards = results.slice(0, 12).map((option, index) => {
-    const isDecided =
-      decided &&
-      option.restaurant.id === decided.restaurantId &&
-      option.timeSlot.id === decided.timeSlotId;
-    return `<li class="option ${isDecided ? "is-decided" : ""}">
+  const resultCards = results
+    .slice(0, 12)
+    .map((option, index) => {
+      const isDecided =
+        decided &&
+        option.restaurant.id === decided.restaurantId &&
+        option.time === decided.time;
+      return `<li class="option ${isDecided ? "is-decided" : ""}">
       <div class="option-rank">#${index + 1}</div>
       <div class="option-body">
-        <strong>${esc(option.restaurant.name)}</strong>
-        <div class="muted small">${esc(fmt(option.timeSlot.start))} · ${option.freeCount} free · ${option.matchedCount} cuisine match${option.matchedCount === 1 ? "" : "es"}</div>
+        <div class="row between">
+          <strong>${esc(option.restaurant.name)}</strong>
+          <span class="badges">${badges(option.restaurant)}</span>
+        </div>
+        <div class="muted small">${esc(fmt(option.time))} · ${option.freeCount} free · ${option.matchedCount} cuisine match${option.matchedCount === 1 ? "" : "es"}</div>
         <div class="muted small">${option.attendees.map(esc).join(", ") || "nobody free"}</div>
       </div>
       ${
         me?.id === session.hostId && !decided
           ? `<button class="primary small" data-action="confirm"
               data-restaurant-id="${option.restaurant.id}"
-              data-slot-id="${option.timeSlot.id}">Confirm</button>`
+              data-time="${esc(option.time)}">Confirm</button>`
           : ""
       }
     </li>`;
-  }).join("");
+    })
+    .join("");
 
   root.innerHTML = `
   <section class="card">
@@ -203,7 +246,7 @@ function renderSession(sid: string): void {
 
   ${
     decided && decidedOption
-      ? `<section class="banner">🎉 Decided: <strong>${esc(decidedOption.restaurant.name)}</strong> at ${esc(fmt(decidedOption.timeSlot.start))} — ${esc(decidedOption.attendees.join(", ") || "nobody")}</section>`
+      ? `<section class="banner">🎉 Decided: <strong>${esc(decidedOption.restaurant.name)}</strong> at ${esc(fmt(decidedOption.time))} — ${esc(decidedOption.attendees.join(", ") || "nobody")}</section>`
       : ""
   }
 
@@ -228,7 +271,12 @@ function renderSession(sid: string): void {
           <form data-form="me">
             <fieldset>
               <legend>When are you free?</legend>
-              <div class="choices">${slots || '<p class="muted">The host added no times.</p>'}</div>
+              <ul class="plain times">${myTimes}</ul>
+              <div class="add-time">
+                <input type="datetime-local" id="new-time" />
+                <button type="button" class="ghost" data-action="add-free-time">Add time</button>
+              </div>
+              ${suggestionChips}
             </fieldset>
             <fieldset>
               <legend>Cuisines you like</legend>
@@ -250,13 +298,17 @@ function renderSession(sid: string): void {
               <input name="restaurantName" required maxlength="80" placeholder="Chez Ali" />
             </label>
             <label>Cuisines
-              <select name="restaurantCuisines" multiple size="5">
-                ${CUISINES.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}
+              <select name="restaurantCuisines" multiple size="6">
+                ${CUISINES.map((c) => `<option value="${esc(c.name)}">${c.icon} ${esc(c.name)}</option>`).join("")}
               </select>
             </label>
             <label>Address (optional)
               <input name="restaurantAddress" maxlength="160" />
             </label>
+            <div class="checks">
+              <label class="pill"><input type="checkbox" name="halal" /> <span>Halal</span></label>
+              <label class="pill"><input type="checkbox" name="vege" /> <span>Vege</span></label>
+            </div>
             <button type="submit" class="ghost">Add restaurant</button>
           </form>`
         : ""
@@ -266,7 +318,7 @@ function renderSession(sid: string): void {
   <section class="card">
     <h2>Ranked options</h2>
     <p class="muted small">Best overlap of free people and liked cuisines${decided ? "" : " — the host confirms the final pick"}.</p>
-    <ol class="options">${resultCards || '<li class="muted">Add restaurants to see options.</li>'}</ol>
+    <ol class="options">${resultCards || '<li class="muted">No options yet — add restaurants and times.</li>'}</ol>
   </section>`;
 }
 
@@ -306,17 +358,16 @@ async function render(): Promise<void> {
 
 /* -------------------------------- handlers -------------------------------- */
 
-function collectDraft(): void {
-  draft = {
-    availableSlotIds: [
-      ...root.querySelectorAll<HTMLInputElement>('input[name="slot"]:checked'),
-    ].map((i) => i.value),
-    cuisinePrefs: [
-      ...root.querySelectorAll<HTMLInputElement>(
-        'input[name="cuisine"]:checked',
-      ),
-    ].map((i) => i.value),
-  };
+function syncCuisines(): void {
+  if (!draft) draft = { freeTimes: [], cuisinePrefs: [] };
+  draft.cuisinePrefs = [
+    ...root.querySelectorAll<HTMLInputElement>('input[name="cuisine"]:checked'),
+  ].map((i) => i.value);
+}
+
+function rerender(): void {
+  const sid = currentSid();
+  if (sid) renderSession(sid);
 }
 
 async function onClick(event: Event): Promise<void> {
@@ -326,19 +377,30 @@ async function onClick(event: Event): Promise<void> {
   if (!button) return;
   const { action } = button.dataset;
 
-  if (action === "add-time") {
-    document
-      .getElementById("times")
-      ?.insertAdjacentHTML("beforeend", timeRow());
+  if (action === "add-free-time") {
+    const input = document.getElementById("new-time") as HTMLInputElement | null;
+    if (!input?.value) return;
+    const time = new Date(input.value);
+    if (Number.isNaN(time.getTime())) return;
+    draft = draft ?? { freeTimes: [], cuisinePrefs: [] };
+    draft.freeTimes = [...new Set([...draft.freeTimes, time.toISOString()])].sort();
+    rerender();
     return;
   }
-  if (action === "remove-time") {
-    const rows = root.querySelectorAll(".time-row");
-    if (rows.length > 1) button.closest(".time-row")?.remove();
+  if (action === "remove-free-time") {
+    if (!draft) return;
+    draft.freeTimes = draft.freeTimes.filter((t) => t !== button.dataset.time);
+    rerender();
+    return;
+  }
+  if (action === "add-suggested") {
+    draft = draft ?? { freeTimes: [], cuisinePrefs: [] };
+    draft.freeTimes = [...new Set([...draft.freeTimes, button.dataset.time as string])].sort();
+    rerender();
     return;
   }
   if (action === "share") {
-    const sid = route().page === "session" ? (route() as { sid: string }).sid : "";
+    const sid = currentSid() ?? "";
     const url = `${location.origin}${location.pathname}#/s/${sid}`;
     try {
       if (navigator.share) {
@@ -353,18 +415,20 @@ async function onClick(event: Event): Promise<void> {
     return;
   }
   if (action === "confirm") {
-    const current = route();
-    if (current.page !== "session") return;
-    const identity = getIdentity(current.sid);
-    if (!identity) return;
+    const sid = currentSid();
+    const identity = sid ? getIdentity(sid) : null;
+    if (!sid || !identity) return;
+    busy(true);
     try {
-      await api.decide(current.sid, identity, {
+      await api.decide(sid, identity, {
         restaurantId: button.dataset.restaurantId as string,
-        timeSlotId: button.dataset.slotId as string,
+        time: button.dataset.time as string,
       });
-      await loadSession(current.sid);
+      await loadSession(sid);
     } catch (error) {
       status(error instanceof Error ? error.message : "Could not confirm");
+    } finally {
+      busy(false);
     }
   }
 }
@@ -378,16 +442,9 @@ async function onSubmit(event: Event): Promise<void> {
 
   try {
     if (kind === "create") {
-      const timeInputs = [
-        ...root.querySelectorAll<HTMLInputElement>(".time-input"),
-      ]
-        .map((i) => i.value)
-        .filter(Boolean)
-        .map((v) => new Date(v).toISOString());
       const result = await api.createSession({
         name: String(values.get("sessionName") ?? ""),
         hostName: String(values.get("hostName") ?? ""),
-        timeSlots: timeInputs,
       });
       setSavedName(String(values.get("hostName") ?? ""));
       setIdentity(result.sessionId, {
@@ -401,15 +458,15 @@ async function onSubmit(event: Event): Promise<void> {
 
     if (kind === "open") {
       const raw = String(values.get("invite") ?? "").trim();
-      const match = raw.match(/s\/([A-Za-z0-9-]+)/) ?? raw.match(/^([A-Za-z0-9-]+)$/);
+      const match =
+        raw.match(/s\/([A-Za-z0-9-]+)/) ?? raw.match(/^([A-Za-z0-9-]+)$/);
       if (match) location.hash = `#/s/${match[1]}`;
       else status("That doesn't look like a valid invite");
       return;
     }
 
-    const current = route();
-    if (current.page !== "session") return;
-    const sid = current.sid;
+    const sid = currentSid();
+    if (!sid) return;
     const identity = getIdentity(sid);
 
     if (kind === "join") {
@@ -428,10 +485,11 @@ async function onSubmit(event: Event): Promise<void> {
     }
 
     if (!identity) return;
+    busy(true);
 
     if (kind === "me") {
-      collectDraft();
-      await api.saveMe(sid, identity, draft ?? {});
+      syncCuisines();
+      await api.saveMe(sid, identity, draft ?? { freeTimes: [], cuisinePrefs: [] });
       status("Choices saved");
       return;
     }
@@ -447,6 +505,8 @@ async function onSubmit(event: Event): Promise<void> {
         name: String(values.get("restaurantName") ?? ""),
         cuisines,
         address: String(values.get("restaurantAddress") ?? "") || undefined,
+        halal: values.get("halal") === "on",
+        vege: values.get("vege") === "on",
       });
       form.reset();
       await loadSession(sid);
@@ -457,6 +517,8 @@ async function onSubmit(event: Event): Promise<void> {
         ? error.message
         : "Something went wrong",
     );
+  } finally {
+    busy(false);
   }
 }
 
@@ -466,9 +528,7 @@ root.addEventListener("click", (e) => void onClick(e));
 root.addEventListener("submit", (e) => void onSubmit(e));
 root.addEventListener("change", (e) => {
   const target = e.target as HTMLElement;
-  if (target.matches('input[name="slot"], input[name="cuisine"]')) {
-    collectDraft();
-  }
+  if (target.matches('input[name="cuisine"]')) syncCuisines();
 });
 window.addEventListener("hashchange", () => void render());
 void render();

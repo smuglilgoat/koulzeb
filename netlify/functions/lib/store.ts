@@ -5,6 +5,7 @@ import type {
   Session,
   SessionMeta,
 } from "../../../shared/types.ts";
+import { DEFAULT_RESTAURANTS } from "../../../shared/seed-restaurants.ts";
 
 const sessionKey = (sid: string) => `s:${sid}`;
 const participantKey = (sid: string, pid: string) => `p:${sid}:${pid}`;
@@ -25,6 +26,10 @@ export async function createSession(
   const s = store();
   await s.setJSON(sessionKey(meta.id), meta);
   await s.setJSON(participantKey(meta.id, host.id), host);
+  // Seed the starter restaurant list into the new session.
+  await Promise.all(
+    DEFAULT_RESTAURANTS.map((r) => s.setJSON(restaurantKey(meta.id, r.id), r)),
+  );
 }
 
 export async function getSessionMeta(sid: string): Promise<SessionMeta | null> {

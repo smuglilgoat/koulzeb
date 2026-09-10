@@ -1,7 +1,7 @@
 # KoulZeb
 
-Plan a group dinner out, together. Propose a few times, share one link, and let
-everyone pick the times they're free and the cuisines they like. KoulZeb crosses
+Plan a group dinner out, together. Share one link, then everyone adds the times
+they're free and the cuisines they like, plus restaurants. KoulZeb crosses
 availability × cuisine preferences × the restaurant list and ranks where and when
 to eat. The host confirms the final pick.
 
@@ -48,13 +48,14 @@ Set the site's **build command** to `npm run build` and **publish directory** to
 
 ## How it works
 
-1. Host creates a session and proposes 1–20 candidate times.
-2. Host shares the link (`/#/s/<id>`); guests join with just a name.
-3. Each participant marks which times they're free and which cuisines they like,
-   and can add restaurants.
+1. Host creates a session (dinner name + their own name) and shares the link.
+2. Guests join with just a name.
+3. Everyone freely adds the times they're free (there is no host-defined time
+   list) and the cuisines they like, and can add restaurants. New sessions start
+   with a default restaurant list.
 4. The API ranks every (time, restaurant) pair: more free people first, then more
-   cuisine matches, then name. Only people free at a time count toward that
-   time's cuisine match.
+   cuisine matches, then time and name. Only people free at a time count toward
+   that time's cuisine match.
 5. The host confirms an option; the session is marked decided.
 
 ## Layout
@@ -62,7 +63,7 @@ Set the site's **build command** to `npm run build` and **publish directory** to
 ```
 index.html              entry page
 src/                    frontend (app.ts, api.ts, state.ts, style.css)
-shared/                 types, decision logic, cuisine list (used by both sides)
+shared/                 types, decision logic, cuisine list, default restaurants
 netlify/functions/api.ts   HTTP routing + validation
 netlify/functions/lib/store.ts   Netlify Blobs access
 test/decide.test.ts     unit tests
@@ -72,16 +73,20 @@ scripts/smoke.mjs       end-to-end API smoke test
 ## Data model (Netlify Blobs store `koulzeb`)
 
 ```
-s:<sessionId>                 session meta (name, host, times, status, decision)
-p:<sessionId>:<participantId> participant (availability, cuisines, suggestions)
-r:<sessionId>:<restaurantId>  restaurant (name, cuisines, address)
+s:<sessionId>                 session meta (name, host, status, decision)
+p:<sessionId>:<participantId> participant (free times, cuisines, suggestions)
+r:<sessionId>:<restaurantId>  restaurant (name, cuisines, address, halal/vege)
 ```
 
 Participants and restaurants are stored one-doc-per-item so concurrent submissions
 never overwrite each other. Participant tokens are redacted from all responses.
+New sessions are seeded with the default restaurant list in
+`shared/seed-restaurants.ts`.
 
 ## Deliberate simplifications
 
 - Polling every 5s instead of realtime push (Blobs is pull-based).
 - Link-based access: anyone with the link can join; only the host can confirm.
 - Time slots are stored as UTC and rendered in the viewer's local timezone.
+- Halal / Vege indicators on the seeded restaurants are best-effort guesses —
+  correct them when adding or reviewing a restaurant.

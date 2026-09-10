@@ -1,4 +1,4 @@
-import { rankOptions } from "../../shared/decide.ts";
+import { normalizeTime, rankOptions } from "../../shared/decide.ts";
 import type {
   Participant,
   PublicParticipant,
@@ -65,6 +65,19 @@ function publicSession(meta: SessionMeta, session: Session): PublicSession {
   };
 }
 
+/** Parse, validate and de-duplicate a list of freely chosen times. */
+function parseFreeTimes(raw: unknown): string[] | null {
+  const items = strArray(raw, 40, 40);
+  if (!items) return null;
+  const times: string[] = [];
+  for (const item of items) {
+    const ms = Date.parse(item);
+    if (Number.isNaN(ms)) return null;
+    times.push(new Date(Math.floor(ms / 60000) * 60000).toISOString());
+  }
+  return [...new Set(times)].sort();
+}
+
 /** Resolve the caller from their id + token headers, if valid. */
 async function auth(req: Request, sid: string): Promise<Participant | null> {
   const pid = req.headers.get("x-participant-id");
@@ -86,23 +99,8 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
       const body = await readJson(req);
       const name = body && str(body.name, 80);
       const hostName = body && str(body.hostName, 40);
-      const rawSlots = body && body.timeSlots;
       if (!name || !hostName) {
         return bad("A session name and your name are required");
-      }
-      if (
-        !Array.isArray(rawSlots) ||
-        rawSlots.length < 1 ||
-        rawSlots.length > 20
-      ) {
-        return bad("Provide between 1 and 20 candidate times");
-      }
-      const starts = rawSlots.filter(
-        (s): s is string =>
-          typeof s === "string" && !Number.isNaN(Date.parse(s)),
-      );
-      if (starts.length !== rawSlots.length) {
-        return bad("Every candidate time must be a valid date");
       }
 
       const sessionId = crypto.randomUUID();
@@ -111,7 +109,7 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
         name: hostName,
         token: crypto.randomUUID(),
         joinedAt: Date.now(),
-        availableSlotIds: [],
+        freeTimes: [],
         cuisinePrefs: [],
         suggestedRestaurantIds: [],
       };
@@ -121,7 +119,6 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
         createdAt: Date.now(),
         hostId: host.id,
         status: "collecting",
-        timeSlots: starts.map((start, i) => ({ id: `t${i + 1}`, start })),
       };
       await db.createSession(meta, host);
       return json(
@@ -144,7 +141,7 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
         name,
         token: crypto.randomUUID(),
         joinedAt: Date.now(),
-        availableSlotIds: [],
+        freeTimes: [],
         cuisinePrefs: [],
         suggestedRestaurantIds: [],
       };
@@ -159,11 +156,7 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
     if (!action && req.method === "GET") {
       const session = await db.getFullSession(sid);
       if (!session) return bad("Session not found", 404);
-      const results = rankOptions(
-        session.timeSlots,
-        session.restaurants,
-        session.participants,
-      );
+      const results = rankOptions(session.restaurants, session.participants);
       return json({ session: publicSession(meta, session), results });
     }
 
@@ -175,12 +168,10 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
       const body = await readJson(req);
       if (!body) return bad("Invalid request body");
 
-      if (body.availableSlotIds !== undefined) {
-        const slots = strArray(body.availableSlotIds, meta.timeSlots.length);
-        if (!slots) return bad("Invalid available times");
-        me.availableSlotIds = slots.filter((id) =>
-          meta.timeSlots.some((t) => t.id === id),
-        );
+      if (body.freeTimes !== undefined) {
+        const times = parseFreeTimes(body.freeTimes);
+        if (!times) return bad("Invalid free times");
+        me.freeTimes = times;
       }
       if (body.cuisinePrefs !== undefined) {
         const cuisines = strArray(body.cuisinePrefs, 30, 40);
@@ -207,6 +198,8 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
         cuisines,
         addedBy: me.id,
         ...(address ? { address } : {}),
+        ...(body?.halal === true ? { halal: true } : {}),
+        ...(body?.vege === true ? { vege: true } : {}),
       };
       await db.addRestaurant(sid, restaurant);
       me.suggestedRestaurantIds.push(restaurant.id);
@@ -220,15 +213,23 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
       if (me.id !== meta.hostId) return bad("Only the host can decide", 403);
       const body = await readJson(req);
       const restaurantId = body && str(body.restaurantId, 64);
-      const timeSlotId = body && str(body.timeSlotId, 64);
+      const time = body && str(body.time, 40);
       const restaurants = await db.listRestaurants(sid);
       if (!restaurantId || !restaurants.some((r) => r.id === restaurantId)) {
         return bad("Unknown restaurant");
       }
-      if (!timeSlotId || !meta.timeSlots.some((t) => t.id === timeSlotId)) {
-        return bad("Unknown time slot");
+      const participants = await db.listParticipants(sid);
+      const times = new Set(
+        participants.flatMap((p) => p.freeTimes),
+      );
+      if (!time || !times.has(normalizeTime(time))) {
+        return bad("Unknown time");
       }
-      meta.decision = { restaurantId, timeSlotId, decidedAt: Date.now() };
+      meta.decision = {
+        restaurantId,
+        time: normalizeTime(time),
+        decidedAt: Date.now(),
+      };
       meta.status = "decided";
       await db.saveSessionMeta(meta);
       return json({ decision: meta.decision });

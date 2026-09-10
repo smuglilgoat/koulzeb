@@ -33,11 +33,7 @@ export type SessionData = {
 };
 
 export const api = {
-  createSession(input: {
-    name: string;
-    hostName: string;
-    timeSlots: string[];
-  }) {
+  createSession(input: { name: string; hostName: string }) {
     return request<{
       sessionId: string;
       participantId: string;
@@ -59,7 +55,7 @@ export const api = {
   saveMe(
     sid: string,
     identity: Identity,
-    patch: { availableSlotIds?: string[]; cuisinePrefs?: string[] },
+    patch: { freeTimes?: string[]; cuisinePrefs?: string[] },
   ) {
     return request<{ participant: PublicParticipant }>(
       `/sessions/${sid}/me`,
@@ -74,7 +70,13 @@ export const api = {
   addRestaurant(
     sid: string,
     identity: Identity,
-    input: { name: string; cuisines: string[]; address?: string },
+    input: {
+      name: string;
+      cuisines: string[];
+      address?: string;
+      halal?: boolean;
+      vege?: boolean;
+    },
   ) {
     return request<{ restaurant: Restaurant }>(
       `/sessions/${sid}/restaurants`,
@@ -89,7 +91,7 @@ export const api = {
   decide(
     sid: string,
     identity: Identity,
-    input: { restaurantId: string; timeSlotId: string },
+    input: { restaurantId: string; time: string },
   ) {
     return request<{ decision: unknown }>(`/sessions/${sid}/decision`, {
       method: "POST",

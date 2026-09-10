@@ -11,6 +11,13 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DECISIONS]
 
+- 2026-09-10 — `[USER]` Round 2: add cuisine icons; let users choose times freely
+  (no host-defined list); add Halal/Vege restaurant indicators; seed a default
+  restaurant list.
+- 2026-09-10 — `[ASSUMPTION]` Times are freely chosen per participant and matched
+  by normalized (minute) instant; candidate times are the union of everyone's.
+- 2026-09-10 — `[ASSUMPTION]` Cuisine icons are emoji; Halal/Vege flags on the
+  seeded defaults are best-effort and should be verified.
 - 2026-09-10 — `[USER]` Defaults locked: link-based identity (no accounts),
   per-session restaurant list, availability via host-proposed time slots,
   ranked results with host confirmation, no notifications, English UI.
@@ -22,6 +29,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [PROGRESS]
 
+- 2026-09-10 — `[TOOL]` Round 2: `npm test` → 7/7. `npm run typecheck` clean.
+  `npm run build` clean. `npm run smoke` against `netlify dev` → 22/22.
 - 2026-09-10 — `[TOOL]` `npm test` → 8/8 pass. `npm run typecheck` → clean.
   `npm run build` → clean. `npm run smoke` against `netlify dev` → 17/17 pass.
 - 2026-09-10 — `[TOOL]` `netlify dev` loads function `api`; `/api/*` routes and
@@ -37,6 +46,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[CODE]` Round 2 committed on branch `agent/cuisines-free-time`
+  (not merged/pushed — awaiting instruction).
 - 2026-09-10 — `[CODE]` KoulZeb MVP committed on branch `agent/koulzeb-mvp`.
 - 2026-09-10 — `[TOOL]` `main` fast-forwarded from the feature branch, pushed to
   `origin` (https://github.com/smuglilgoat/koulzeb). `main` tracks `origin/main`.

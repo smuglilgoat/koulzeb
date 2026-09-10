@@ -1,18 +1,15 @@
-export type TimeSlot = {
-  id: string;
-  /** ISO-8601 timestamp (UTC). Rendered in the viewer's local timezone. */
-  start: string;
-  label?: string;
-};
-
 export type Restaurant = {
   id: string;
   name: string;
   cuisines: string[];
   address?: string;
   notes?: string;
-  /** When set, the restaurant is only considered for these time slots. */
-  openSlotIds?: string[];
+  rating?: number;
+  price?: string;
+  /** Serves halal food (best-effort indicator). */
+  halal?: boolean;
+  /** Vegetarian-friendly (best-effort indicator). */
+  vege?: boolean;
   addedBy: string;
 };
 
@@ -22,14 +19,16 @@ export type Participant = {
   /** Secret proving identity. Never sent to other clients in session views. */
   token: string;
   joinedAt: number;
-  availableSlotIds: string[];
+  /** ISO-8601 minutes the participant is free, chosen freely by them. */
+  freeTimes: string[];
   cuisinePrefs: string[];
   suggestedRestaurantIds: string[];
 };
 
 export type Decision = {
   restaurantId: string;
-  timeSlotId: string;
+  /** ISO-8601 time of the decided slot. */
+  time: string;
   decidedAt: number;
 };
 
@@ -39,7 +38,6 @@ export type SessionMeta = {
   createdAt: number;
   hostId: string;
   status: "collecting" | "decided";
-  timeSlots: TimeSlot[];
   decision?: Decision;
 };
 
@@ -57,9 +55,10 @@ export type PublicSession = SessionMeta & {
 };
 
 export type RankedOption = {
-  timeSlot: TimeSlot;
+  /** ISO-8601 time. */
+  time: string;
   restaurant: Restaurant;
-  /** Number of participants free at this time slot. */
+  /** Number of participants free at this time. */
   freeCount: number;
   /** Of those free, how many listed a cuisine this restaurant serves. */
   matchedCount: number;
