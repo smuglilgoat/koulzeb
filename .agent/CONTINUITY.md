@@ -80,8 +80,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
-- 2026-09-10 — `[CODE]` Round 6 (tabs) committed on branch `agent/tabs`
-  (awaiting merge/push instruction).
+- 2026-09-10 — `[TOOL]` Round 6 (tabs) merged (fast-forward) into `main` and
+  pushed to `origin`.
 - 2026-09-10 — `[TOOL]` Round 5 (playful UI) merged (fast-forward) into `main`
   and pushed to `origin`.
 - 2026-09-10 — `[TOOL]` Round 4 merged (fast-forward) into `main` and pushed to
