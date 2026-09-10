@@ -105,16 +105,6 @@ check(
   !JSON.stringify(fetched.data.session).includes('"token"'),
   "participant tokens are never exposed",
 );
-check(
-  fetched.data.session.restaurants.length >= 30,
-  "default restaurants are seeded into the session",
-);
-check(
-  fetched.data.session.restaurants.some(
-    (r) => r.name === "Kodawari Ramen (Tsukiji)",
-  ),
-  "seeded defaults include the provided list",
-);
 
 const optionAt = (name, time) =>
   fetched.data.results.find(
@@ -129,6 +119,31 @@ check(!!pasta && pasta.freeCount === 2 && pasta.matchedCount === 1,
 check(
   fetched.data.results.some((o) => o.time === T2),
   "results include a time only one person is free at",
+);
+
+const noAuthPlaces = await call(
+  "GET",
+  `/api/sessions/${sessionId}/places?q=ramen`,
+);
+check(noAuthPlaces.status === 403, "places search requires a participant");
+
+const shortPlaces = await call(
+  "GET",
+  `/api/sessions/${sessionId}/places?q=a`,
+  undefined,
+  auth(hostId, hostToken),
+);
+check(shortPlaces.status === 400, "places search rejects a too-short query");
+
+const placesSearch = await call(
+  "GET",
+  `/api/sessions/${sessionId}/places?q=ramen`,
+  undefined,
+  auth(hostId, hostToken),
+);
+check(
+  [200, 503].includes(placesSearch.status),
+  "places search succeeds or reports itself unconfigured (no API key)",
 );
 
 const badMap = await call(
@@ -162,20 +177,6 @@ check(
 check(
   edited.data.restaurant.halal === undefined,
   "unchecked halal is cleared on edit",
-);
-
-const seed = fetched.data.session.restaurants.find(
-  (r) => r.rating !== undefined,
-);
-const seedEdit = await call(
-  "PATCH",
-  `/api/sessions/${sessionId}/restaurants/${seed.id}`,
-  { name: `${seed.name} ★`, cuisines: seed.cuisines },
-  auth(hostId, hostToken),
-);
-check(
-  seedEdit.data.restaurant.rating === seed.rating,
-  "edit preserves seeded rating on a default restaurant",
 );
 
 const guestDecide = await call(

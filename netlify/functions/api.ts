@@ -9,6 +9,7 @@ import type {
   SessionMeta,
 } from "../../shared/types.ts";
 import * as db from "./lib/store.ts";
+import * as places from "./lib/places.ts";
 
 export const config = { path: "/api/*" };
 
@@ -83,7 +84,8 @@ async function auth(req: Request, sid: string): Promise<Participant | null> {
 }
 
 export default async (req: Request, _context: unknown): Promise<Response> => {
-  const parts = new URL(req.url).pathname.split("/").filter(Boolean);
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/").filter(Boolean);
   const [, resource, sid, action, rid] = parts;
 
   try {
@@ -156,6 +158,18 @@ export default async (req: Request, _context: unknown): Promise<Response> => {
     }
 
     const me = await auth(req, sid);
+
+    // GET /api/sessions/:id/places?q=...
+    if (action === "places" && req.method === "GET") {
+      if (!me) return bad("You are not a participant in this session", 403);
+      const query = (url.searchParams.get("q") ?? "").trim();
+      if (query.length < 2 || query.length > 80) {
+        return bad("Search needs between 2 and 80 characters");
+      }
+      const result = await places.search(query);
+      if (!result.ok) return bad(result.error, result.status);
+      return json({ places: result.places, cached: result.cached });
+    }
 
     // PATCH /api/sessions/:id/me
     if (action === "me" && req.method === "PATCH") {

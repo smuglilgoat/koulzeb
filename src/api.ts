@@ -1,4 +1,5 @@
 import type {
+  PlaceResult,
   PublicParticipant,
   PublicSession,
   RankedOption,
@@ -122,5 +123,12 @@ export const api = {
       headers: auth(identity),
       body: JSON.stringify(input),
     });
+  },
+
+  searchPlaces(sid: string, identity: Identity, query: string) {
+    return request<{ places: PlaceResult[]; cached: boolean }>(
+      `/sessions/${sid}/places?q=${encodeURIComponent(query)}`,
+      { headers: auth(identity) },
+    );
   },
 };

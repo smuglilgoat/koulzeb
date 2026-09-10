@@ -11,6 +11,17 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DECISIONS]
 
+- 2026-09-10 — `[USER]` Round 7: switch the restaurant list to Google Places API,
+  cap calls so it stays free, and guide setup.
+- 2026-09-10 — `[TOOL]` Verified GMP pricing (updated 2026-09-01): Places Text
+  Search free caps are IDs-only = unlimited, **Pro = 5,000**, **Enterprise =
+  1,000** per month. Name/address/map-link needs Pro (5k); rating/price pushes to
+  Enterprise (1k). So "10k free" is not achievable with usable fields.
+- 2026-09-10 — `[ASSUMPTION]` Search runs server-side (key in
+  `GOOGLE_PLACES_API_KEY`, never in the client), results cached 7 days, and a
+  hard monthly cap `PLACES_MONTHLY_LIMIT` (default 5000) guards the bill. Static
+  seed list removed; manual add/edit retained. rating/price opt-in via
+  `PLACES_INCLUDE_RATING`.
 - 2026-09-10 — `[USER]` Round 6: too much scrolling — put each section behind a tab.
 - 2026-09-10 — `[ASSUMPTION]` Session page only: persistent header + banner, then
   sticky tabs (My picks / Places / Picks) showing one section at a time;
@@ -47,6 +58,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [PROGRESS]
 
+- 2026-09-10 — `[TOOL]` Round 7: `typecheck`/`build` clean; `npm test` 12/12;
+  `smoke` 27/27 (incl. places search 403/400/503 paths).
 - 2026-09-10 — `[TOOL]` Round 6: `typecheck`/`build` clean; `npm test` 12/12;
   `smoke` 27/27; dev serves `/`, `/src/app.ts`, `/src/style.css` (200).
 - 2026-09-10 — `[TOOL]` Round 5: `typecheck`/`build` clean; `npm test` 12/12;
@@ -80,6 +93,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[CODE]` Round 7 (Google Places search) committed on branch
+  `agent/places-api`; needs `GOOGLE_PLACES_API_KEY` set in Netlify to function.
 - 2026-09-10 — `[TOOL]` Round 6 (tabs) merged (fast-forward) into `main` and
   pushed to `origin`.
 - 2026-09-10 — `[TOOL]` Round 5 (playful UI) merged (fast-forward) into `main`

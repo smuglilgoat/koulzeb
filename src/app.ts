@@ -1,7 +1,7 @@
 import { CUISINES, cuisineIcon } from "../shared/cuisines.ts";
 import { TIME_SLOTS } from "../shared/times.ts";
 import { mapsUrl } from "../shared/maps.ts";
-import type { Restaurant } from "../shared/types.ts";
+import type { PlaceResult, Restaurant } from "../shared/types.ts";
 import { ApiError, api, type SessionData } from "./api.ts";
 import {
   getIdentity,
@@ -20,6 +20,8 @@ let draft: { freeTimes: string[]; cuisinePrefs: string[] } | null = null;
 let editingId: string | null = null;
 type Tab = "me" | "places" | "picks";
 let activeTab: Tab = "me";
+let placeResults: PlaceResult[] | null = null;
+let placesQuery = "";
 
 const AVATARS = ["🐱", "🐶", "🐼", "🦊", "🐸", "🐵", "🦁", "🐷", "🐻", "🐨", "🐯", "🐮"];
 
@@ -70,7 +72,12 @@ function busy(on: boolean): void {
   root.classList.toggle("busy", on);
 }
 
-function badges(r: Restaurant): string {
+function badges(r: {
+  rating?: number;
+  price?: string;
+  halal?: boolean;
+  vege?: boolean;
+}): string {
   const parts: string[] = [];
   if (r.rating !== undefined) {
     parts.push(`<span class="badge rating">⭐ ${r.rating.toFixed(1)}</span>`);
@@ -343,17 +350,47 @@ function renderSession(sid: string): void {
         </section>`
       : `<section class="card"><p class="muted">Join the dinner to add your picks! 🙋</p></section>`;
 
+  const placesResults = placeResults
+    ? placeResults.length
+      ? `<ul class="plain">${placeResults
+          .map(
+            (p, i) => `<li class="restaurant">
+              <div class="row between">
+                <strong>${esc(p.name)}</strong>
+                <span class="badges">${badges(p)}</span>
+              </div>
+              ${p.address ? `<div class="muted small">📍 ${esc(p.address)}</div>` : ""}
+              <div class="cuisines">${cuisineTags(p.cuisines)}</div>
+              <div class="links">
+                ${p.mapUrl ? `<a class="map-link" href="${esc(p.mapUrl)}" target="_blank" rel="noopener">🗺️ Map</a>` : ""}
+                <button type="button" class="big small" data-action="add-place" data-index="${i}">➕ Add</button>
+              </div>
+            </li>`,
+          )
+          .join("")}</ul>`
+      : `<p class="muted small">Hmm, nothing found. Try another search. 🔍</p>`
+    : "";
+
   const placesSection = `<section class="card">
     <h2>🍕 Places to eat</h2>
     ${
       me
-        ? `<form data-form="restaurant" class="stack">
-            <h3 class="form-title">➕ Add a place</h3>
-            ${restaurantFields()}
-            <button type="submit" class="big ghost">Add it! 🍽️</button>
-          </form>`
+        ? `<form data-form="places-search" class="search">
+            <input name="q" maxlength="80" placeholder="Search Google: ramen, tagine, sushi…" value="${esc(placesQuery)}" />
+            <button type="submit" class="big small">Search 🔍</button>
+          </form>
+          <p class="muted small">Results come from Google Places and are cached to save our free quota.</p>
+          ${placesResults}
+          <details class="add-manual">
+            <summary>➕ Add a place yourself</summary>
+            <form data-form="restaurant" class="stack">
+              ${restaurantFields()}
+              <button type="submit" class="big ghost">Add it! 🍽️</button>
+            </form>
+          </details>`
         : ""
     }
+    <h3 class="form-title">${me ? "Already in this dinner" : "Places"}</h3>
     <ul class="plain">${restaurants}</ul>
   </section>`;
 
@@ -418,6 +455,8 @@ function startPolling(sid: string): void {
 async function render(): Promise<void> {
   window.clearInterval(pollTimer);
   activeTab = "me";
+  placeResults = null;
+  placesQuery = "";
   const current = route();
   if (current.page === "home") {
     data = null;
@@ -479,6 +518,29 @@ async function onClick(event: Event): Promise<void> {
     activeTab = (button.dataset.tab as Tab) ?? "me";
     editingId = null;
     rerender();
+    return;
+  }
+  if (action === "add-place") {
+    const sid = currentSid();
+    const identity = sid ? getIdentity(sid) : null;
+    const place = placeResults?.[Number(button.dataset.index)];
+    if (!sid || !identity || !place) return;
+    busy(true);
+    try {
+      await api.addRestaurant(sid, identity, {
+        name: place.name,
+        cuisines: place.cuisines,
+        address: place.address,
+        mapUrl: place.mapUrl,
+      });
+      placeResults = null;
+      status("Added! 🍽️");
+      await loadSession(sid);
+    } catch (error) {
+      status(error instanceof Error ? error.message : "Could not add");
+    } finally {
+      busy(false);
+    }
     return;
   }
   if (action === "edit-restaurant") {
@@ -560,6 +622,27 @@ async function onSubmit(event: Event): Promise<void> {
     const sid = currentSid();
     if (!sid) return;
     const identity = getIdentity(sid);
+
+    if (kind === "places-search") {
+      if (!identity) return;
+      const query = String(values.get("q") ?? "").trim();
+      placesQuery = query;
+      if (query.length < 2) {
+        status("Type at least 2 letters 🔍");
+        return;
+      }
+      busy(true);
+      try {
+        const result = await api.searchPlaces(sid, identity, query);
+        placeResults = result.places;
+        status(result.cached ? "Found them (cached) 🎯" : "Found some places! 🎯");
+      } catch (error) {
+        placeResults = null;
+        status(error instanceof Error ? error.message : "Search failed");
+      }
+      rerender();
+      return;
+    }
 
     if (kind === "join") {
       if (!identity) {

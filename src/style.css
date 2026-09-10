@@ -591,6 +591,35 @@ a.ghost {
   color: #fff;
 }
 
+/* places search */
+.search {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-manual {
+  margin: 0.8rem 0;
+  border: 3px dashed var(--line);
+  border-radius: 16px;
+  padding: 0.55rem 0.8rem;
+}
+
+.add-manual summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--sky);
+}
+
+.add-manual form {
+  margin-top: 0.8rem;
+}
+
 #app.busy {
   opacity: 0.6;
   pointer-events: none;

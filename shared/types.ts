@@ -66,3 +66,14 @@ export type RankedOption = {
   matchedCount: number;
   attendees: string[];
 };
+
+/** A Google Places result, normalized for the client. */
+export type PlaceResult = {
+  placeId: string;
+  name: string;
+  address?: string;
+  mapUrl?: string;
+  cuisines: string[];
+  rating?: number;
+  price?: string;
+};
