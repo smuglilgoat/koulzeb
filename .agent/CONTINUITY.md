@@ -11,6 +11,10 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DECISIONS]
 
+- 2026-09-10 — `[USER]` Round 6: too much scrolling — put each section behind a tab.
+- 2026-09-10 — `[ASSUMPTION]` Session page only: persistent header + banner, then
+  sticky tabs (My picks / Places / Picks) showing one section at a time;
+  `activeTab` resets on route change and survives polling. Home unchanged.
 - 2026-09-10 — `[USER]` Round 5: redo the UI to be playful / child-like, to coax
   an indecisive friend into deciding each week.
 - 2026-09-10 — `[ASSUMPTION]` UI-only change: emoji, chunky buttons, bright
@@ -43,6 +47,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [PROGRESS]
 
+- 2026-09-10 — `[TOOL]` Round 6: `typecheck`/`build` clean; `npm test` 12/12;
+  `smoke` 27/27; dev serves `/`, `/src/app.ts`, `/src/style.css` (200).
 - 2026-09-10 — `[TOOL]` Round 5: `typecheck`/`build` clean; `npm test` 12/12;
   `smoke` 27/27; dev server serves `/`, `/src/app.ts`, `/src/style.css` (200).
 - 2026-09-10 — `[TOOL]` Round 4: `npm test` → 12/12; `typecheck`/`build` clean;
@@ -74,6 +80,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[CODE]` Round 6 (tabs) committed on branch `agent/tabs`
+  (awaiting merge/push instruction).
 - 2026-09-10 — `[TOOL]` Round 5 (playful UI) merged (fast-forward) into `main`
   and pushed to `origin`.
 - 2026-09-10 — `[TOOL]` Round 4 merged (fast-forward) into `main` and pushed to

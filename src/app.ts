@@ -18,6 +18,8 @@ let statusTimer: number | undefined;
 let data: SessionData | null = null;
 let draft: { freeTimes: string[]; cuisinePrefs: string[] } | null = null;
 let editingId: string | null = null;
+type Tab = "me" | "places" | "picks";
+let activeTab: Tab = "me";
 
 const AVATARS = ["🐱", "🐶", "🐼", "🦊", "🐸", "🐵", "🦁", "🐷", "🐻", "🐨", "🐯", "🐮"];
 
@@ -300,6 +302,74 @@ function renderSession(sid: string): void {
     })
     .join("");
 
+  const tabBar = `
+  <nav class="tabs">
+    <button type="button" class="tab ${activeTab === "me" ? "active" : ""}" data-action="tab" data-tab="me">${me ? "🕒 My picks" : "🙋 Join"}</button>
+    <button type="button" class="tab ${activeTab === "places" ? "active" : ""}" data-action="tab" data-tab="places">🍕 Places <span class="count">${session.restaurants.length}</span></button>
+    <button type="button" class="tab ${activeTab === "picks" ? "active" : ""}" data-action="tab" data-tab="picks">🏆 Picks <span class="count">${results.length}</span></button>
+  </nav>`;
+
+  const meSection = !identity
+    ? `<section class="card">
+        <h2>👋 Who are you?</h2>
+        <form data-form="join">
+          <label>Your name
+            <input name="guestName" required maxlength="40" value="${esc(getSavedName())}" placeholder="Your name" />
+          </label>
+          <button type="submit" class="big">Count me in! 🙋</button>
+        </form>
+      </section>`
+    : me
+      ? `<section class="card">
+          <h2>🕒 When can you eat?</h2>
+          <form data-form="me">
+            <fieldset>
+              <legend>Tap the times that work for you 👇</legend>
+              <ul class="plain times">${myTimes}</ul>
+              <div class="add-time">
+                <select id="new-time">
+                  ${TIME_SLOTS.map((t) => `<option value="${t}"${t === "19:00" ? " selected" : ""}>${t}</option>`).join("")}
+                </select>
+                <button type="button" class="big small" data-action="add-free-time">Add it! ⏰</button>
+              </div>
+              ${suggestionChips}
+            </fieldset>
+            <fieldset>
+              <legend>😋 What are you craving?</legend>
+              <div class="pills">${cuisines}</div>
+            </fieldset>
+            <button type="submit" class="big">Save my picks! ✅</button>
+          </form>
+        </section>`
+      : `<section class="card"><p class="muted">Join the dinner to add your picks! 🙋</p></section>`;
+
+  const placesSection = `<section class="card">
+    <h2>🍕 Places to eat</h2>
+    ${
+      me
+        ? `<form data-form="restaurant" class="stack">
+            <h3 class="form-title">➕ Add a place</h3>
+            ${restaurantFields()}
+            <button type="submit" class="big ghost">Add it! 🍽️</button>
+          </form>`
+        : ""
+    }
+    <ul class="plain">${restaurants}</ul>
+  </section>`;
+
+  const picksSection = `<section class="card">
+    <h2>🏆 Best picks!</h2>
+    <p class="muted small">We put the best matches first${decided ? "." : ` — ${me?.id === session.hostId ? "you pick the winner! 👑" : "the host picks the winner! 👑"}`}</p>
+    <ol class="options">${resultCards || '<li class="muted">No picks yet — add some places and times! 🍽️</li>'}</ol>
+  </section>`;
+
+  const section =
+    activeTab === "places"
+      ? placesSection
+      : activeTab === "picks"
+        ? picksSection
+        : meSection;
+
   root.innerHTML = `
   <section class="card">
     <div class="row between">
@@ -323,65 +393,8 @@ function renderSession(sid: string): void {
       : ""
   }
 
-  ${
-    !identity
-      ? `<section class="card">
-          <h2>👋 Who are you?</h2>
-          <form data-form="join">
-            <label>Your name
-              <input name="guestName" required maxlength="40" value="${esc(getSavedName())}" placeholder="Your name" />
-            </label>
-            <button type="submit" class="big">Count me in! 🙋</button>
-          </form>
-        </section>`
-      : ""
-  }
-
-  ${
-    me
-      ? `<section class="card">
-          <h2>🕒 When can you eat?</h2>
-          <form data-form="me">
-            <fieldset>
-              <legend>Tap the times that work for you 👇</legend>
-              <ul class="plain times">${myTimes}</ul>
-              <div class="add-time">
-                <select id="new-time">
-                  ${TIME_SLOTS.map((t) => `<option value="${t}"${t === "19:00" ? " selected" : ""}>${t}</option>`).join("")}
-                </select>
-                <button type="button" class="big small" data-action="add-free-time">Add it! ⏰</button>
-              </div>
-              ${suggestionChips}
-            </fieldset>
-            <fieldset>
-              <legend>😋 What are you craving?</legend>
-              <div class="pills">${cuisines}</div>
-            </fieldset>
-            <button type="submit" class="big">Save my picks! ✅</button>
-          </form>
-        </section>`
-      : ""
-  }
-
-  <section class="card">
-    <h2>🍕 Places to eat</h2>
-    <ul class="plain">${restaurants}</ul>
-    ${
-      me
-        ? `<form data-form="restaurant" class="stack">
-            <h3 class="form-title">➕ Add a place</h3>
-            ${restaurantFields()}
-            <button type="submit" class="big ghost">Add it! 🍽️</button>
-          </form>`
-        : ""
-    }
-  </section>
-
-  <section class="card">
-    <h2>🏆 Best picks!</h2>
-    <p class="muted small">We put the best matches first${decided ? "." : ` — ${me?.id === session.hostId ? "you pick the winner! 👑" : "the host picks the winner! 👑"}`}</p>
-    <ol class="options">${resultCards || '<li class="muted">No picks yet — add some places and times! 🍽️</li>'}</ol>
-  </section>`;
+  ${tabBar}
+  ${section}`;
 }
 
 /* --------------------------------- loading -------------------------------- */
@@ -404,6 +417,7 @@ function startPolling(sid: string): void {
 
 async function render(): Promise<void> {
   window.clearInterval(pollTimer);
+  activeTab = "me";
   const current = route();
   if (current.page === "home") {
     data = null;
@@ -458,6 +472,12 @@ async function onClick(event: Event): Promise<void> {
   if (action === "add-suggested") {
     draft = draft ?? { freeTimes: [], cuisinePrefs: [] };
     draft.freeTimes = [...new Set([...draft.freeTimes, button.dataset.time as string])].sort();
+    rerender();
+    return;
+  }
+  if (action === "tab") {
+    activeTab = (button.dataset.tab as Tab) ?? "me";
+    editingId = null;
     rerender();
     return;
   }

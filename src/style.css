@@ -543,6 +543,54 @@ a.ghost {
   font-weight: 800;
 }
 
+/* tabs */
+.tabs {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(6px);
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  padding: 0.35rem;
+  box-shadow: 0 4px 0 var(--shadow);
+}
+
+.tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.5rem 0.4rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.tab.active {
+  background: var(--coral);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--coral-dark);
+}
+
+.tab .count {
+  background: #f0ecf8;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+}
+
+.tab.active .count {
+  background: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
 #app.busy {
   opacity: 0.6;
   pointer-events: none;
