@@ -60,6 +60,9 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[TOOL]` Fix merged (fast-forward) into `main` and pushed to
+  `origin`. The stale invite error still requires a **frontend redeploy + hard
+  refresh** to clear the old bundle; the code fix alone doesn't update clients.
 - 2026-09-10 — `[CODE]` On `agent/fix-stale-invite-legacy`: `store.ts` coerces
   legacy participant/restaurant docs to the current shape; `netlify.toml` pins
   `NODE_VERSION = "22"` so Netlify builds don't silently fall back to old output.
