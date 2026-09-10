@@ -19,6 +19,8 @@ let data: SessionData | null = null;
 let draft: { freeTimes: string[]; cuisinePrefs: string[] } | null = null;
 let editingId: string | null = null;
 
+const AVATARS = ["🐱", "🐶", "🐼", "🦊", "🐸", "🐵", "🦁", "🐷", "🐻", "🐨", "🐯", "🐮"];
+
 /* ---------------------------------- utils --------------------------------- */
 
 function esc(value: string): string {
@@ -33,6 +35,12 @@ function esc(value: string): string {
         "'": "&#39;",
       })[c] as string,
   );
+}
+
+function avatarFor(id: string): string {
+  let hash = 0;
+  for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATARS[hash % AVATARS.length];
 }
 
 function route(): { page: "home" } | { page: "session"; sid: string } {
@@ -63,11 +71,11 @@ function busy(on: boolean): void {
 function badges(r: Restaurant): string {
   const parts: string[] = [];
   if (r.rating !== undefined) {
-    parts.push(`<span class="badge rating">★ ${r.rating.toFixed(1)}</span>`);
+    parts.push(`<span class="badge rating">⭐ ${r.rating.toFixed(1)}</span>`);
   }
   if (r.price) parts.push(`<span class="badge">${esc(r.price)}</span>`);
-  if (r.halal) parts.push(`<span class="badge halal">Halal</span>`);
-  if (r.vege) parts.push(`<span class="badge vege">Vege</span>`);
+  if (r.halal) parts.push(`<span class="badge halal">🥩 Halal</span>`);
+  if (r.vege) parts.push(`<span class="badge vege">🥗 Veggie</span>`);
   return parts.join("");
 }
 
@@ -79,10 +87,10 @@ function cuisineTags(cuisines: string[]): string {
 
 function restaurantFields(r?: Restaurant): string {
   return `
-    <label>Name
+    <label>Place name
       <input name="restaurantName" required maxlength="80" placeholder="Chez Ali" value="${r ? esc(r.name) : ""}" />
     </label>
-    <label>Cuisines
+    <label>What kind of food?
       <select name="restaurantCuisines" multiple size="6">
         ${CUISINES.map(
           (c) =>
@@ -90,15 +98,15 @@ function restaurantFields(r?: Restaurant): string {
         ).join("")}
       </select>
     </label>
-    <label>Address (optional)
+    <label>Address (if you know it)
       <input name="restaurantAddress" maxlength="160" value="${r?.address ? esc(r.address) : ""}" />
     </label>
-    <label>Google Maps link (optional)
+    <label>Google Maps link (if you have one)
       <input name="restaurantMapUrl" maxlength="300" placeholder="https://maps.google.com/…" value="${r?.mapUrl ? esc(r.mapUrl) : ""}" />
     </label>
     <div class="checks">
-      <label class="pill"><input type="checkbox" name="halal"${r?.halal ? " checked" : ""} /> <span>Halal</span></label>
-      <label class="pill"><input type="checkbox" name="vege"${r?.vege ? " checked" : ""} /> <span>Vege</span></label>
+      <label class="pill"><input type="checkbox" name="halal"${r?.halal ? " checked" : ""} /> <span>🥩 Halal</span></label>
+      <label class="pill"><input type="checkbox" name="vege"${r?.vege ? " checked" : ""} /> <span>🥗 Veggie</span></label>
     </div>`;
 }
 
@@ -107,30 +115,31 @@ function restaurantFields(r?: Restaurant): string {
 function renderHome(): void {
   root.innerHTML = `
   <section class="hero">
-    <h1>Dinner out, decided together.</h1>
-    <p class="muted">Share one link. Everyone adds the times they're free and the cuisines they like, plus restaurants. KoulZeb finds the overlap.</p>
+    <div class="mascot">🍽️</div>
+    <h1>Let's pick somewhere to eat!</h1>
+    <p class="muted">Make a dinner, share one link, and everyone says when they're free and what they're hungry for. KoulZeb picks the best match — no more 47-message group chat. 😅</p>
   </section>
 
   <section class="card">
-    <h2>Plan a dinner</h2>
+    <h2>🍽️ Start a dinner</h2>
     <form data-form="create">
-      <label>Dinner name
-        <input name="sessionName" required maxlength="80" placeholder="Friday team dinner" />
+      <label>Name this dinner
+        <input name="sessionName" required maxlength="80" placeholder="Friday nom-noms" />
       </label>
-      <label>Your name
+      <label>What should we call you?
         <input name="hostName" required maxlength="40" value="${esc(getSavedName())}" placeholder="Amine" />
       </label>
-      <button type="submit" class="primary">Create session</button>
+      <button type="submit" class="big">Create it! 🚀</button>
     </form>
   </section>
 
   <section class="card">
-    <h2>Have an invite?</h2>
+    <h2>🔗 Got an invite?</h2>
     <form data-form="open">
-      <label>Paste the invite link or session id
+      <label>Paste the link here
         <input name="invite" placeholder="https://.../#/s/abc123" />
       </label>
-      <button type="submit" class="ghost">Open</button>
+      <button type="submit" class="big ghost">Let's go! ➡️</button>
     </form>
   </section>`;
 }
@@ -141,7 +150,7 @@ function renderSession(sid: string): void {
   const identity = getIdentity(sid);
 
   if (!data) {
-    root.innerHTML = `<section class="card"><p class="muted">Loading…</p><div id="status" class="status"></div></section>`;
+    root.innerHTML = `<section class="card"><p class="muted">Loading… 🍳</p><div id="status" class="status"></div></section>`;
     return;
   }
 
@@ -174,25 +183,50 @@ function renderSession(sid: string): void {
     .filter((t) => !mine.includes(t))
     .sort();
 
+  const answered = session.participants.filter((p) => p.freeTimes.length > 0);
+  const waiting = session.participants.filter((p) => p.freeTimes.length === 0);
+  const pct = session.participants.length
+    ? Math.round((answered.length / session.participants.length) * 100)
+    : 0;
+  const everyoneReady =
+    session.participants.length > 0 && waiting.length === 0;
+
+  const friends = session.participants
+    .map((p) => {
+      const done = p.freeTimes.length > 0;
+      return `<span class="friend ${done ? "done" : ""}" title="${esc(p.name)}${p.id === session.hostId ? " (host)" : ""}">
+        <span class="avatar">${avatarFor(p.id)}</span>
+        <span class="friend-name">${esc(p.name)}</span>
+        <span class="tick">${done ? "✅" : "⏳"}</span>
+      </span>`;
+    })
+    .join("");
+
+  const nudge = decided
+    ? ""
+    : everyoneReady
+      ? `<p class="nudge good">🎉 Everyone has answered! Roll the dice and pick a place!</p>`
+      : `<p class="nudge">⏳ Still waiting on <strong>${waiting.map((p) => esc(p.name)).join(", ")}</strong>… go poke them! 👉</p>`;
+
   const myTimes = mine.length
     ? mine
         .map(
           (t) => `<li class="time-row">
-            <span>${esc(t)}</span>
+            <span>🕒 ${esc(t)}</span>
             <button type="button" class="ghost icon" data-action="remove-free-time"
-              data-time="${esc(t)}" aria-label="Remove time">&times;</button>
+              data-time="${esc(t)}" aria-label="Remove time">✖️</button>
           </li>`,
         )
         .join("")
-    : `<li class="muted small">No times yet — add when you're free.</li>`;
+    : `<li class="muted small">No times yet — tap below to add when you're free! 👇</li>`;
 
   const suggestionChips = suggested.length
     ? `<div class="suggestions">
-        <span class="muted small">Others are free:</span>
+        <span class="muted small">Your friends can do these too:</span>
         ${suggested
           .map(
             (t) => `<button type="button" class="chip" data-action="add-suggested"
-              data-time="${esc(t)}">+ ${esc(t)}</button>`,
+              data-time="${esc(t)}">➕ ${esc(t)}</button>`,
           )
           .join("")}
       </div>`
@@ -216,8 +250,8 @@ function renderSession(sid: string): void {
                   <input type="hidden" name="restaurantId" value="${r.id}" />
                   ${restaurantFields(r)}
                   <div class="row">
-                    <button type="submit" class="primary small">Save</button>
-                    <button type="button" class="ghost small" data-action="cancel-edit">Cancel</button>
+                    <button type="submit" class="big small">Save it! ✅</button>
+                    <button type="button" class="big small ghost" data-action="cancel-edit">Never mind</button>
                   </div>
                 </form>
               </li>`
@@ -226,15 +260,15 @@ function renderSession(sid: string): void {
                   <strong>${esc(r.name)}</strong>
                   <span class="badges">${badges(r)}</span>
                 </div>
-                <div class="cuisines">${cuisineTags(r.cuisines)}${r.address ? `<span class="muted small">${esc(r.address)}</span>` : ""}</div>
+                <div class="cuisines">${cuisineTags(r.cuisines)}${r.address ? `<span class="muted small">📍 ${esc(r.address)}</span>` : ""}</div>
                 <div class="links">
-                  <a class="map-link" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener">📍 Map</a>
-                  ${me ? `<button type="button" class="ghost small" data-action="edit-restaurant" data-id="${r.id}">Edit</button>` : ""}
+                  <a class="map-link" href="${esc(mapsUrl(r))}" target="_blank" rel="noopener">🗺️ Map</a>
+                  ${me ? `<button type="button" class="ghost small" data-action="edit-restaurant" data-id="${r.id}">✏️ Edit</button>` : ""}
                 </div>
               </li>`,
         )
         .join("")
-    : `<li class="muted">No restaurants yet — add the first one.</li>`;
+    : `<li class="muted">No places yet — add the first one! 👇</li>`;
 
   const resultCards = results
     .slice(0, 12)
@@ -243,22 +277,23 @@ function renderSession(sid: string): void {
         decided &&
         option.restaurant.id === decided.restaurantId &&
         option.time === decided.time;
+      const medal = ["🥇", "🥈", "🥉"][index] ?? "🍽️";
       return `<li class="option ${isDecided ? "is-decided" : ""}">
-      <div class="option-rank">#${index + 1}</div>
+      <div class="option-rank">${medal}</div>
       <div class="option-body">
         <div class="row between">
           <strong>${esc(option.restaurant.name)}</strong>
           <span class="badges">${badges(option.restaurant)}</span>
         </div>
-        <div class="muted small">${esc(option.time)} · ${option.freeCount} free · ${option.matchedCount} cuisine match${option.matchedCount === 1 ? "" : "es"}</div>
-        <div class="muted small">${option.attendees.map(esc).join(", ") || "nobody free"}</div>
-        <a class="map-link small" href="${esc(mapsUrl(option.restaurant))}" target="_blank" rel="noopener">📍 Map</a>
+        <div class="muted small">🕒 ${esc(option.time)} · 👥 ${option.freeCount} free · 😋 ${option.matchedCount} food match${option.matchedCount === 1 ? "" : "es"}</div>
+        <div class="muted small">🙋 ${option.attendees.map(esc).join(", ") || "nobody free"}</div>
+        <a class="map-link small" href="${esc(mapsUrl(option.restaurant))}" target="_blank" rel="noopener">🗺️ Map</a>
       </div>
       ${
         me?.id === session.hostId && !decided
-          ? `<button class="primary small" data-action="confirm"
+          ? `<button class="big small" data-action="confirm"
               data-restaurant-id="${option.restaurant.id}"
-              data-time="${esc(option.time)}">Confirm</button>`
+              data-time="${esc(option.time)}">Pick this! 🎉</button>`
           : ""
       }
     </li>`;
@@ -269,30 +304,34 @@ function renderSession(sid: string): void {
   <section class="card">
     <div class="row between">
       <div>
-        <h1 class="tight">${esc(session.name)}</h1>
-        <p class="muted small">${session.participants.length} guest${session.participants.length === 1 ? "" : "s"}${me ? ` · you are ${esc(me.name)}${me.id === session.hostId ? " (host)" : ""}` : ""}</p>
+        <h1 class="tight">🍽️ ${esc(session.name)}</h1>
+        <p class="muted small">${me ? `You're ${esc(me.name)}${me.id === session.hostId ? " — the boss 👑" : ""}` : "You're just looking 👀"}</p>
       </div>
-      <button class="ghost" data-action="share">Share invite</button>
+      <button class="big small" data-action="share">📣 Invite</button>
     </div>
-    <p class="invite muted small">${esc(inviteUrl)}</p>
+    <div class="friends">${friends}</div>
+    <div class="progress" aria-hidden="true"><div class="bar" style="width:${pct}%"></div></div>
+    <p class="muted small">${answered.length}/${session.participants.length} friends have picked their times</p>
+    ${nudge}
+    <p class="invite muted small">🔗 ${esc(inviteUrl)}</p>
     <div id="status" class="status"></div>
   </section>
 
   ${
     decided && decidedOption
-      ? `<section class="banner">🎉 Decided: <strong>${esc(decidedOption.restaurant.name)}</strong> at ${esc(decidedOption.time)} — ${esc(decidedOption.attendees.join(", ") || "nobody")}</section>`
+      ? `<section class="banner">🎉🍽️ YAY! We're going to <strong>${esc(decidedOption.restaurant.name)}</strong> at <strong>${esc(decidedOption.time)}</strong>! 🎉<br/><span class="small">With ${esc(decidedOption.attendees.join(", ") || "nobody yet")} — have fun! 😋</span></section>`
       : ""
   }
 
   ${
     !identity
       ? `<section class="card">
-          <h2>Join this dinner</h2>
+          <h2>👋 Who are you?</h2>
           <form data-form="join">
             <label>Your name
-              <input name="guestName" required maxlength="40" value="${esc(getSavedName())}" />
+              <input name="guestName" required maxlength="40" value="${esc(getSavedName())}" placeholder="Your name" />
             </label>
-            <button type="submit" class="primary">Join</button>
+            <button type="submit" class="big">Count me in! 🙋</button>
           </form>
         </section>`
       : ""
@@ -301,47 +340,47 @@ function renderSession(sid: string): void {
   ${
     me
       ? `<section class="card">
-          <h2>Your choices</h2>
+          <h2>🕒 When can you eat?</h2>
           <form data-form="me">
             <fieldset>
-              <legend>When are you free?</legend>
+              <legend>Tap the times that work for you 👇</legend>
               <ul class="plain times">${myTimes}</ul>
               <div class="add-time">
                 <select id="new-time">
                   ${TIME_SLOTS.map((t) => `<option value="${t}"${t === "19:00" ? " selected" : ""}>${t}</option>`).join("")}
                 </select>
-                <button type="button" class="ghost" data-action="add-free-time">Add time</button>
+                <button type="button" class="big small" data-action="add-free-time">Add it! ⏰</button>
               </div>
               ${suggestionChips}
             </fieldset>
             <fieldset>
-              <legend>Cuisines you like</legend>
+              <legend>😋 What are you craving?</legend>
               <div class="pills">${cuisines}</div>
             </fieldset>
-            <button type="submit" class="primary">Save my choices</button>
+            <button type="submit" class="big">Save my picks! ✅</button>
           </form>
         </section>`
       : ""
   }
 
   <section class="card">
-    <h2>Restaurants</h2>
+    <h2>🍕 Places to eat</h2>
     <ul class="plain">${restaurants}</ul>
     ${
       me
         ? `<form data-form="restaurant" class="stack">
-            <h3 class="form-title">Add a restaurant</h3>
+            <h3 class="form-title">➕ Add a place</h3>
             ${restaurantFields()}
-            <button type="submit" class="ghost">Add restaurant</button>
+            <button type="submit" class="big ghost">Add it! 🍽️</button>
           </form>`
         : ""
     }
   </section>
 
   <section class="card">
-    <h2>Ranked options</h2>
-    <p class="muted small">Best overlap of free people and liked cuisines${decided ? "" : " — the host confirms the final pick"}.</p>
-    <ol class="options">${resultCards || '<li class="muted">No options yet — add restaurants and times.</li>'}</ol>
+    <h2>🏆 Best picks!</h2>
+    <p class="muted small">We put the best matches first${decided ? "." : ` — ${me?.id === session.hostId ? "you pick the winner! 👑" : "the host picks the winner! 👑"}`}</p>
+    <ol class="options">${resultCards || '<li class="muted">No picks yet — add some places and times! 🍽️</li>'}</ol>
   </section>`;
 }
 
@@ -352,7 +391,7 @@ async function loadSession(sid: string): Promise<void> {
     data = await api.getSession(sid);
     renderSession(sid);
   } catch (error) {
-    root.innerHTML = `<section class="card"><h2>Session unavailable</h2><p class="muted">${esc(error instanceof Error ? error.message : "Unknown error")}</p><a href="#/" class="ghost">← Back home</a></section>`;
+    root.innerHTML = `<section class="card"><h2>😢 Oops!</h2><p class="muted">${esc(error instanceof Error ? error.message : "Unknown error")}</p><a href="#/" class="big ghost">🏠 Back home</a></section>`;
   }
 }
 
@@ -440,7 +479,7 @@ async function onClick(event: Event): Promise<void> {
         await navigator.share({ title: "KoulZeb dinner invite", url });
       } else {
         await navigator.clipboard.writeText(url);
-        status("Invite link copied");
+        status("Copied! 📋");
       }
     } catch {
       /* user cancelled the share sheet */
@@ -494,7 +533,7 @@ async function onSubmit(event: Event): Promise<void> {
       const match =
         raw.match(/s\/([A-Za-z0-9-]+)/) ?? raw.match(/^([A-Za-z0-9-]+)$/);
       if (match) location.hash = `#/s/${match[1]}`;
-      else status("That doesn't look like a valid invite");
+      else status("Hmm, that link looks funny 🤔");
       return;
     }
 
@@ -523,7 +562,7 @@ async function onSubmit(event: Event): Promise<void> {
     if (kind === "me") {
       syncCuisines();
       await api.saveMe(sid, identity, draft ?? { freeTimes: [], cuisinePrefs: [] });
-      status("Choices saved");
+      status("Yum! Saved ✅");
       return;
     }
 

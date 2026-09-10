@@ -54,6 +54,7 @@ Set the site's **build command** to `npm run build` and **publish directory** to
    30-minute slots — and the cuisines they like, and can add or edit restaurants.
    New sessions start with a default restaurant list. Every restaurant shows a
    Google Maps link (generated from its name/address, or an explicit link if set).
+   A friendly progress bar shows who still needs to answer, so you can nudge them.
 4. The API ranks every (time, restaurant) pair: more free people first, then more
    cuisine matches, then time and name. Only people free at a time count toward
    that time's cuisine match.

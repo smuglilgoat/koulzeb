@@ -11,6 +11,11 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [DECISIONS]
 
+- 2026-09-10 — `[USER]` Round 5: redo the UI to be playful / child-like, to coax
+  an indecisive friend into deciding each week.
+- 2026-09-10 — `[ASSUMPTION]` UI-only change: emoji, chunky buttons, bright
+  colors, friendly copy, a progress bar and a "still waiting on…" nudge. No
+  logic or API changes; `app.ts` handlers and data attributes preserved.
 - 2026-09-10 — `[USER]` Round 4: add a Google Maps link per restaurant and an
   option to edit restaurants.
 - 2026-09-10 — `[ASSUMPTION]` Map links are generated from name/address unless an
@@ -38,6 +43,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [PROGRESS]
 
+- 2026-09-10 — `[TOOL]` Round 5: `typecheck`/`build` clean; `npm test` 12/12;
+  `smoke` 27/27; dev server serves `/`, `/src/app.ts`, `/src/style.css` (200).
 - 2026-09-10 — `[TOOL]` Round 4: `npm test` → 12/12; `typecheck`/`build` clean;
   `npm run smoke` → 27/27.
 - 2026-09-10 — `[TOOL]` Round 3: `npm test` → 8/8; `typecheck` and `build` clean;
@@ -67,6 +74,8 @@ Briefing for the next agent session. Newest entries first within each section.
 
 ## [OUTCOMES]
 
+- 2026-09-10 — `[CODE]` Round 5 (playful UI) committed on branch
+  `agent/playful-ui` (awaiting merge/push instruction).
 - 2026-09-10 — `[TOOL]` Round 4 merged (fast-forward) into `main` and pushed to
   `origin`.
 - 2026-09-10 — `[TOOL]` Fix merged (fast-forward) into `main` and pushed to
